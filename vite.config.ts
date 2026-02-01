@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks: {
             vendor: ['react', 'react-dom', 'recharts', 'lucide-react', '@supabase/supabase-js'],
-            ui: ['framer-motion'] // if used, otherwise generic
+            // ui: ['framer-motion'] // Removed phantom dependency
           }
         }
       }
