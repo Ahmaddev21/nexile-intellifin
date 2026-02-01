@@ -58,6 +58,9 @@ const App: React.FC = () => {
   const loadInitialData = async () => {
     setIsLoading(true);
     try {
+      // Validate config first to trigger ErrorBoundary if missing keys
+      import('./lib/supabase').then(m => m.validateConfig());
+
       const [data, companyData, userData] = await Promise.all([
         import('./services/api').then(m => m.fetchFinancialData()),
         import('./services/api').then(m => m.fetchCompany()),
