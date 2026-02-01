@@ -75,9 +75,9 @@ const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights
   const currentMonth = monthlyData[selectedMonthIndex];
   const hasComparison = currentMonth && selectedMonthIndex > 0;
 
-  // Calculate totals for display
+  // Calculate ALL-TIME totals for display (User requested "Total Revenue" to match Breakdown)
   const totalRevenue = useMemo(() => {
-    if (currentMonth?.revenue !== undefined) return currentMonth.revenue;
+    // Sum of ALL paid invoices minus applied credits
     const creditsByInvoice: Record<string, number> = {};
     (data.creditNotes || [])
       .filter(cn => cn.status === 'applied' && !!cn.invoiceId)
@@ -85,23 +85,30 @@ const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights
         const id = cn.invoiceId as string;
         creditsByInvoice[id] = (creditsByInvoice[id] || 0) + cn.amount;
       });
+
     return data.invoices
       .filter(i => i.status === 'paid')
       .reduce((sum, inv) => {
         const credited = creditsByInvoice[inv.id] || 0;
         return sum + Math.max(inv.amount - credited, 0);
       }, 0);
-  }, [currentMonth, data.invoices, data.creditNotes]);
+  }, [data.invoices, data.creditNotes]);
 
   const totalExpenses = useMemo(() => {
-    const expensesFromExp = data.expenses.filter(e => e.status === 'paid').reduce((acc, curr) => acc + curr.amount, 0);
-    const expensesFromPayables = (data.payableInvoices || []).filter(p => p.status === 'paid').reduce((acc, curr) => acc + curr.amount, 0);
+    // Sum of ALL paid expenses + paid payables
+    const expensesFromExp = data.expenses
+      .filter(e => e.status === 'paid')
+      .reduce((acc, curr) => acc + curr.amount, 0);
 
-    return currentMonth?.expenses || (expensesFromExp + expensesFromPayables);
-  }, [currentMonth, data.expenses, data.payableInvoices]);
+    const expensesFromPayables = (data.payableInvoices || [])
+      .filter(p => p.status === 'paid')
+      .reduce((acc, curr) => acc + curr.amount, 0);
 
-  const netProfit = currentMonth?.netProfit || (totalRevenue - totalExpenses);
-  const profitMargin = currentMonth?.profitMargin || (totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0);
+    return expensesFromExp + expensesFromPayables;
+  }, [data.expenses, data.payableInvoices]);
+
+  const netProfit = totalRevenue - totalExpenses;
+  const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
   const chartData = useMemo(() => {
     if (monthlyData.length > 0) {
@@ -136,7 +143,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights
         </div>
       </div>
 
-      {/* Month Selector */}
+      {/* Month Selector: ONLY for Charts and Insights now, not top cards */}
       {monthlyData.length > 0 && (
         <MonthSelector
           selectedMonth={monthlyData[selectedMonthIndex]?.month || ''}
@@ -150,36 +157,33 @@ const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights
         />
       )}
 
-      {/* Top Stats - High-Level Metrics Only */}
+      {/* Top Stats - ALL TIME Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Total Revenue"
           value={`${currencySymbol}${totalRevenue.toLocaleString()}`}
-          change={hasComparison ? currentMonth.revenueChange : undefined}
+          // Removed change prop as All-Time doesn't have a simple MoM
           icon={<TrendingUp className="w-6 h-6 text-emerald-500" />}
-          tooltip="Total revenue from paid invoices. Higher revenue indicates strong sales performance."
+          tooltip="Lifetime revenue from all paid invoices."
           onClick={() => setShowRevenueModal(true)}
         />
         <MetricCard
-          title="Expenses"
+          title="Total Expenses"
           value={`${currencySymbol}${totalExpenses.toLocaleString()}`}
-          change={hasComparison ? currentMonth.expensesChange : undefined}
           icon={<TrendingDown className="w-6 h-6 text-rose-500" />}
-          tooltip="Total business expenses. Lower expenses relative to revenue improve profitability."
+          tooltip="Lifetime business expenses (paid)."
         />
         <MetricCard
           title="Net Profit"
           value={`${currencySymbol}${netProfit.toLocaleString()}`}
-          change={hasComparison ? currentMonth.profitChange : undefined}
           icon={<Wallet className="w-6 h-6 text-indigo-500" />}
-          tooltip="Revenue minus expenses. This is your bottom line - the actual profit your business generates."
+          tooltip="Lifetime Revenue minus Expenses."
         />
         <MetricCard
           title="Profit Margin"
           value={`${profitMargin.toFixed(1)}%`}
-          change={hasComparison ? currentMonth.marginChange : undefined}
           icon={<Target className="w-6 h-6 text-amber-500" />}
-          tooltip="Profit as a percentage of revenue. Shows how much profit you keep from each dollar earned. Higher is better."
+          tooltip="Overall profit margin."
         />
       </div>
 
