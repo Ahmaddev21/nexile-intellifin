@@ -11,6 +11,17 @@ export default defineConfig(({ mode }) => {
     },
     base: '/',
     plugins: [react()],
+    build: {
+      chunkSizeWarningLimit: 1000, // Increase limit to 1000kb
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'recharts', 'lucide-react', '@supabase/supabase-js'],
+            ui: ['framer-motion'] // if used, otherwise generic
+          }
+        }
+      }
+    },
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
