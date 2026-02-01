@@ -1,0 +1,19 @@
+{
+    "name": "nexile-backend",
+    "version": "1.0.0",
+    "description": "Secure backend API for Nexile AI chat",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "nodemon index.js"
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "dotenv": "^16.0.0",
+        "express": "^4.18.0",
+        "node-fetch": "^2.6.7"
+    },
+    "devDependencies": {
+        "nodemon": "^2.0.20"
+    }
+}

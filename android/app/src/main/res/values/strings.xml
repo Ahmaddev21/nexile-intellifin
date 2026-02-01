@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Nexile Intellifin</string>
+    <string name="title_activity_main">Nexile Intellifin</string>
+    <string name="package_name">com.nexile.intellifin</string>
+    <string name="custom_url_scheme">com.nexile.intellifin</string>
+</resources>

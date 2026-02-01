@@ -1,0 +1,7 @@
+{
+  "name": "Nexile IntelliFin",
+  "description": "A modern AI-powered financial operating system designed for business decision intelligence, replacing legacy spreadsheets with structured smart tables and predictive AI insights.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
