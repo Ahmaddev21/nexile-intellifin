@@ -129,6 +129,12 @@ const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights
           <p className="text-slate-500 dark:text-slate-400">Welcome back, {userName}. Every number tells a story.</p>
         </div>
         <div className="flex items-center gap-4">
+          {company?.joinCode && (
+            <div className="hidden md:block text-right border-r border-slate-200 dark:border-slate-800 pr-4 mr-1">
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Team Code</span>
+              <div className="font-mono font-bold text-lg text-indigo-600 dark:text-indigo-400 tracking-widest">{company.joinCode}</div>
+            </div>
+          )}
           <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 px-4 py-2 rounded-2xl flex items-center gap-3">
             <Award className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             <div>
