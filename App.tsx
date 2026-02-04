@@ -40,6 +40,7 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'invoice' | 'expense' | 'payable' | 'credit_note'>('invoice');
   const [editingTransaction, setEditingTransaction] = useState<any | null>(null);
+  const [onboardingError, setOnboardingError] = useState<string | null>(null);
 
   const [company, setCompany] = useState<Company>({
     name: '',
@@ -138,9 +139,9 @@ const App: React.FC = () => {
       setCompany(updatedCompany);
       setIsSetupComplete(true);
       await refreshData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save company settings:', error);
-      alert('Failed to initialize workspace. Please try again.');
+      setOnboardingError(error.message || 'Failed to initialize workspace. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -452,6 +453,15 @@ const App: React.FC = () => {
                   <li className="flex items-center gap-2"><span className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></span> AI Analysis Cluster: Ready</li>
                 </ul>
               </div>
+
+              {/* Error Display for Onboarding */}
+              {onboardingError && (
+                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3 text-rose-300 text-sm">
+                  <Shield className="w-5 h-5 flex-shrink-0" />
+                  <span>{onboardingError}</span>
+                </div>
+              )}
+
               <button
                 onClick={finishOnboarding}
                 disabled={isLoading}
