@@ -94,8 +94,8 @@ const AIChat: React.FC<AIChatProps> = ({ data }) => {
               <Sparkles className="w-4 h-4 text-amber-500 animate-pulse shrink-0" />
             </h3>
             <div className="flex items-center gap-2 mt-0.5 md:mt-1">
-              <span className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-emerald-500 bg-emerald-500/10 px-1.5 md:px-2 py-0.5 rounded shrink-0">Live</span>
-              <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Intelligence Core Active</p>
+              <span className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 md:px-2 py-0.5 rounded shrink-0">Locked</span>
+              <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Feature Coming Soon</p>
             </div>
           </div>
         </div>
@@ -123,32 +123,24 @@ const AIChat: React.FC<AIChatProps> = ({ data }) => {
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-8 animate-in fade-in zoom-in duration-1000">
             <div className="relative">
-              <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-full"></div>
-              <div className="w-24 h-24 bg-gradient-to-tr from-indigo-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-[2rem] flex items-center justify-center shadow-glass relative border border-slate-100 dark:border-slate-700">
-                <BrainCircuit className="w-12 h-12 text-indigo-500" />
+              <div className="absolute inset-0 bg-slate-200/50 dark:bg-slate-700/50 blur-3xl rounded-full"></div>
+              <div className="w-24 h-24 bg-white dark:bg-slate-800 rounded-[2rem] flex items-center justify-center shadow-inner relative border border-slate-200 dark:border-slate-700">
+                <BrainCircuit className="w-12 h-12 text-slate-400 dark:text-slate-600" />
+                <div className="absolute -bottom-2 -right-2 bg-amber-500 text-white p-2 rounded-xl shadow-lg">
+                  <Sparkles className="w-6 h-6" />
+                </div>
               </div>
             </div>
             <div className="space-y-3">
-              <h4 className="font-bold text-2xl text-slate-900 dark:text-white font-heading">How can I help you today?</h4>
-              <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
-                I'm your dedicated financial analyst. I can help analyze your profits, forecast expenses, and optimize your business strategy.
+              <h4 className="font-bold text-2xl text-slate-900 dark:text-white font-heading">AI Analyst is Upgrade-Locked</h4>
+              <p className="text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs mx-auto">
+                We are currently upgrading our Intelligence Core. This feature will be available in the next release.
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-3 w-full animate-in slide-in-from-bottom-4 duration-700 delay-300">
-              {[
-                { q: "Which project was most profitable?", icon: "💰" },
-                { q: "Analyze our expense trends this month", icon: "📊" },
-                { q: "What's our projected cash flow?", icon: "📈" }
-              ].map(item => (
-                <button
-                  key={item.q}
-                  onClick={() => setInput(item.q)}
-                  className="group flex items-center justify-between p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-2xl transition-all hover:shadow-lg hover:shadow-indigo-500/10 text-left"
-                >
-                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">{item.q}</span>
-                  <span className="text-lg opacity-50 group-hover:opacity-100 transition-opacity">{item.icon}</span>
-                </button>
-              ))}
+
+            <div className="px-5 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 font-bold text-sm tracking-wide flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              FEATURE COMING SOON
             </div>
           </div>
         )}
@@ -192,39 +184,43 @@ const AIChat: React.FC<AIChatProps> = ({ data }) => {
         )}
       </div>
 
-      {/* Modern Input Bar */}
+      {/* Modern Input Bar - LOCKED */}
       <div className="p-6 md:p-10 pt-0 relative">
         <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-slate-900 to-transparent -translate-y-full pointer-events-none"></div>
 
         <div className="relative group/input flex items-center">
-          <div className="absolute left-6 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors pointer-events-none uppercase text-[10px] font-black tracking-widest hidden md:block">
+          {/* LOCKED OVERLAY */}
+          <div className="absolute inset-0 z-20 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm rounded-3xl md:rounded-[2.5rem] flex items-center justify-center border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white rounded-full shadow-lg">
+              <Sparkles className="w-4 h-4 text-amber-400 dark:text-amber-500" />
+              <span className="text-sm font-bold text-white dark:text-slate-900">Feature Coming Soon</span>
+            </div>
+          </div>
+
+          <div className="absolute left-6 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors pointer-events-none uppercase text-[10px] font-black tracking-widest hidden md:block opacity-50">
             CHAT
           </div>
           <input
             type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask anything about your business..."
-            className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-3xl md:rounded-[2.5rem] pl-6 md:pl-20 pr-16 py-6 md:py-8 text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 transition-all font-medium text-base md:text-lg shadow-inner"
+            disabled
+            placeholder="AI Analysis is currently locked..."
+            className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-3xl md:rounded-[2.5rem] pl-6 md:pl-20 pr-16 py-6 md:py-8 text-slate-400 dark:text-slate-500 outline-none cursor-not-allowed font-medium text-base md:text-lg shadow-inner select-none"
           />
           <button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            className={`absolute right-4 md:right-6 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white w-12 h-12 md:w-14 md:h-14 rounded-2xl md:rounded-3xl transition-all shadow-lg flex items-center justify-center ${input.trim() && !isLoading ? 'shadow-indigo-500/40 hover:-translate-y-1 active:scale-95' : 'opacity-50'
-              }`}
+            disabled
+            className="absolute right-4 md:right-6 bg-slate-200 dark:bg-slate-700 text-slate-400 w-12 h-12 md:w-14 md:h-14 rounded-2xl md:rounded-3xl flex items-center justify-center cursor-not-allowed"
           >
             <Send className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="flex justify-center gap-8 mt-6">
+        <div className="flex justify-center gap-8 mt-6 opacity-50">
           <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] font-black flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]"></span>
+            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
             NexileIntelliFin AI v2.0
           </p>
           <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] font-black hidden md:block">
-            Powered by Multi-Token Fallback Cluster
+            Status: Coming Soon
           </p>
         </div>
       </div>

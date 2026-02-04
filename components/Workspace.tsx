@@ -7,6 +7,8 @@ interface WorkspaceProps {
   data: FinancialData;
   currencySymbol: string;
   onCategorize?: (expenseId: string, event: React.MouseEvent) => void;
+  onAddInvoice: () => void;
+  onAddExpense: () => void;
   onAddPayable: () => void;
   onAddCreditNote: () => void;
   onEditInvoice?: (invoice: any) => void;

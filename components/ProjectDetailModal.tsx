@@ -138,7 +138,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ projectId, isOp
                                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Paid Expenses</span>
                                 </div>
                                 <div className="text-xl font-bold text-rose-600 dark:text-rose-400">
-                                    {currencySymbol}{projectData.paidExpenses.toLocaleString()}
+                                    {currencySymbol}{projectData.paidOpExpenses.toLocaleString()}
                                 </div>
                                 <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Actual Costs</div>
                             </div>

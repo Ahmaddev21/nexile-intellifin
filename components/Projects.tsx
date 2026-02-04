@@ -65,7 +65,7 @@ const Projects: React.FC<ProjectsProps> = ({ data, currencySymbol, onDataRefresh
                     const inv = data.invoices.find(i => i.id === cn.invoiceId);
                     return inv ? inv.projectId === p.id : false;
                 })
-                .map(cn => cn.date);
+                .map(cn => cn.createdAt);
             const allDates = [...invDates, ...expDates, ...payDates, ...creditDates].filter(Boolean);
             const firstActivityDate = allDates.length
                 ? new Date(Math.min(...allDates.map(d => new Date(d).getTime()))).toISOString()
@@ -423,7 +423,7 @@ const Projects: React.FC<ProjectsProps> = ({ data, currencySymbol, onDataRefresh
                                         const inv = data.invoices.find(i => i.id === cn.invoiceId);
                                         return inv ? inv.projectId === p.id : false;
                                     })
-                                    .map(cn => cn.date);
+                                    .map(cn => cn.createdAt);
                                 const allDates = [...invDates, ...expDates, ...payDates, ...creditDates].filter(Boolean);
                                 const firstActivityDate = allDates.length
                                     ? new Date(Math.min(...allDates.map(d => new Date(d).getTime())))

@@ -101,6 +101,7 @@ export interface UserProgress {
   level: number;
   badges: Badge[];
   nextLevelPoints: number;
+  streaks?: number;
 }
 
 export interface MonthlyMetrics {

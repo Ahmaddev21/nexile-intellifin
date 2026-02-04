@@ -15,7 +15,7 @@ import { Building2, Globe, Coins, Calendar, ArrowRight, Loader2, Rocket, Zap, Sh
 const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [activeView, setActiveView] = useState('dashboard');
-  const [financialData, setFinancialData] = useState<FinancialData>({ projects: [], invoices: [], expenses: [] });
+  const [financialData, setFinancialData] = useState<FinancialData>({ projects: [], invoices: [], expenses: [], payableInvoices: [], creditNotes: [] });
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
@@ -26,8 +26,8 @@ const App: React.FC = () => {
     level: 1,
     nextLevelPoints: 1000,
     badges: [
-      { id: 'b1', name: 'First Command', description: 'Initialize your workspace', icon: 'Rocket', unlocked: false },
-      { id: 'b2', name: 'Categorizer', description: 'Categorize 50 expenses', icon: 'Zap', unlocked: false }
+      { id: 'b1', name: 'First Command', description: 'Initialize your workspace', icon: 'Rocket', unlocked: false, color: 'indigo' },
+      { id: 'b2', name: 'Categorizer', description: 'Categorize 50 expenses', icon: 'Zap', unlocked: false, color: 'amber' }
     ],
     streaks: 0
   });
