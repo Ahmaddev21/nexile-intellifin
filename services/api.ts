@@ -14,6 +14,22 @@ const getUser = async () => {
     }
 };
 
+const getCompanyId = async (): Promise<string | null> => {
+    const user = await getUser();
+    if (!user) return null;
+
+    // Check if we have company_id in metadata (optimization)
+    // For now, fetch from company_users table
+    const { data, error } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+
+    if (error || !data) return null;
+    return data.company_id;
+};
+
 const mapProject = (p: any): Project => ({
     id: p.id,
     name: p.name,
@@ -41,49 +57,6 @@ const mapInvoice = (i: any, projectMap: Record<string, string> = {}): Invoice =>
     date: i.date,
     status: i.status
 });
-
-// ... (skipping other maps)
-
-export const createInvoice = async (data: any) => {
-    const user = await getUser();
-    if (user) {
-        const { data: result, error } = await supabase.from('invoices').insert({
-            user_id: user.id,
-            project_id: data.projectId,
-            client_name: data.clientName,
-            amount: data.amount,
-            date: data.date,
-            status: data.status || 'sent',
-            custom_id: data.customId // Save custom ID
-        }).select().single();
-
-        if (error) throw error;
-        return mapInvoice(result);
-    }
-    throw new Error('User not authenticated');
-};
-
-export const updateInvoice = async (id: string, updates: any) => {
-    const user = await getUser();
-    if (user) {
-        const dbUpdates: any = {};
-        if (updates.amount) dbUpdates.amount = updates.amount;
-        if (updates.date) dbUpdates.date = updates.date;
-        if (updates.status) dbUpdates.status = updates.status;
-        if (updates.clientName) dbUpdates.client_name = updates.clientName;
-        if (updates.customId !== undefined) dbUpdates.custom_id = updates.customId; // Update custom ID
-
-        const { data, error } = await supabase.from('invoices')
-            .update(dbUpdates)
-            .eq('id', id)
-            .eq('user_id', user.id)
-            .select().single();
-
-        if (error) throw error;
-        return mapInvoice(data);
-    }
-    throw new Error('User not authenticated');
-};
 
 const mapExpense = (e: any, projectMap: Record<string, string> = {}): Expense => ({
     id: e.id,
@@ -119,140 +92,70 @@ const mapCreditNote = (c: any): CreditNote => ({
     updatedAt: c.updated_at
 });
 
-// --- Core Fetching ---
-
-export const fetchFinancialData = async (): Promise<FinancialData> => {
+export const createInvoice = async (data: any) => {
     const user = await getUser();
+    const companyId = await getCompanyId();
 
-    if (user) {
-        try {
-            const [projects, invoices, expenses, payables, credits] = await Promise.all([
-                supabase.from('projects').select('*').eq('user_id', user.id),
-                supabase.from('invoices').select('*').eq('user_id', user.id),
-                supabase.from('expenses').select('*').eq('user_id', user.id),
-                supabase.from('payable_invoices').select('*').eq('user_id', user.id),
-                supabase.from('credit_notes').select('*').eq('user_id', user.id)
-            ]);
-
-            // If any critical data is missing (e.g. table doesn't exist yet), we might get error.
-            // But we'll assume schema is applied.
-
-            // Create project map
-            const projectMap: Record<string, string> = {};
-            (projects.data || []).forEach((p: any) => {
-                projectMap[p.id] = p.name;
-            });
-
-            return {
-                projects: (projects.data || []).map(mapProject),
-                invoices: (invoices.data || []).map(i => mapInvoice(i, projectMap)),
-                expenses: (expenses.data || []).map(e => mapExpense(e, projectMap)),
-                payableInvoices: (payables.data || []).map(p => mapPayable(p, projectMap)),
-                creditNotes: (credits.data || []).map(mapCreditNote)
-            };
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    throw new Error('User not authenticated');
-};
-
-// --- Project Activity Helper ---
-const updateProjectLastActivity = async (projectId?: string) => {
-    if (!projectId) return;
-    const user = await getUser();
-    const nowIso = new Date().toISOString();
-    if (user) {
-        try {
-            await supabase
-                .from('projects')
-                .update({ last_activity_date: nowIso })
-                .eq('id', projectId)
-                .eq('user_id', user.id);
-        } catch (err) {
-            console.warn('Failed to update last activity date:', err);
-        }
-        return;
-    }
-};
-
-const ensureProjectFirstActivity = async (projectId?: string, activityDateIso?: string) => {
-    if (!projectId || !activityDateIso) return;
-    const user = await getUser();
-    if (user) {
-        try {
-            await supabase
-                .from('projects')
-                .update({ first_activity_date: activityDateIso })
-                .eq('id', projectId)
-                .eq('user_id', user.id)
-                .is('first_activity_date', null);
-        } catch (err) {
-            console.warn('Failed to set first activity date:', err);
-        }
-        return;
-    }
-};
-
-export const fetchCompany = async () => {
-    const user = await getUser();
-    if (user) {
-        const { data } = await supabase.from('companies').select('*').eq('user_id', user.id).single();
-        if (data) {
-            return {
-                name: data.name,
-                industry: data.industry,
-                currency: data.currency,
-                fiscalYearStart: data.fiscal_year_start || data.fiscalYearStart || 'January'
-            };
-        }
-    }
-    return null;
-};
-
-export const updateCompany = async (companyData: any) => {
-    const user = await getUser();
-    if (user) {
-        // Upsert company
-        const { data, error } = await supabase.from('companies').upsert({
+    if (user && companyId) {
+        const { data: result, error } = await supabase.from('invoices').insert({
             user_id: user.id,
-            name: companyData.name,
-            industry: companyData.industry,
-            currency: companyData.currency,
-            fiscal_year_start: companyData.fiscalYearStart || 'January'
+            company_id: companyId,
+            project_id: data.projectId,
+            client_name: data.clientName,
+            amount: data.amount,
+            date: data.date,
+            status: data.status || 'sent',
+            custom_id: data.customId // Save custom ID
         }).select().single();
-        if (!error && data) {
-            return {
-                name: data.name,
-                industry: data.industry,
-                currency: data.currency,
-                fiscalYearStart: data.fiscal_year_start || 'January'
-            };
-        }
+
+        if (error) throw error;
+        return mapInvoice(result);
+    }
+    throw new Error('User not authenticated or no company found');
+};
+
+export const updateInvoice = async (id: string, updates: any) => {
+    const user = await getUser();
+    const companyId = await getCompanyId();
+    if (user && companyId) {
+        const dbUpdates: any = {};
+        if (updates.amount) dbUpdates.amount = updates.amount;
+        if (updates.date) dbUpdates.date = updates.date;
+        if (updates.status) dbUpdates.status = updates.status;
+        if (updates.clientName) dbUpdates.client_name = updates.clientName;
+        if (updates.customId !== undefined) dbUpdates.custom_id = updates.customId; // Update custom ID
+
+        const { data, error } = await supabase.from('invoices')
+            .update(dbUpdates)
+            .eq('id', id)
+            .eq('company_id', companyId) // Filter by company
+            .select().single();
+
+        if (error) throw error;
+        return mapInvoice(data);
     }
     throw new Error('User not authenticated');
 };
-
-
 
 export const deleteInvoice = async (invoiceId: string) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         let projectId: string | undefined;
         try {
             const { data: existing } = await supabase
                 .from('invoices')
                 .select('project_id')
                 .eq('id', invoiceId)
-                .eq('user_id', user.id)
+                .eq('company_id', companyId)
                 .single();
             projectId = existing?.project_id;
         } catch { }
         const { error } = await supabase.from('invoices')
             .delete()
             .eq('id', invoiceId)
-            .eq('user_id', user.id);
+            .eq('company_id', companyId);
 
         if (error) throw error;
         await updateProjectLastActivity(projectId);
@@ -265,9 +168,12 @@ export const deleteInvoice = async (invoiceId: string) => {
 
 export const createExpense = async (expenseData: any) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         const { data, error } = await supabase.from('expenses').insert({
             user_id: user.id,
+            company_id: companyId,
             category: expenseData.category,
             project_id: expenseData.projectId || null,
             amount: expenseData.amount,
@@ -286,7 +192,9 @@ export const createExpense = async (expenseData: any) => {
 
 export const updateExpense = async (expenseId: string, updates: any) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         const dbUpdates: any = {};
         if (updates.category) dbUpdates.category = updates.category;
         if (updates.projectId !== undefined) dbUpdates.project_id = updates.projectId || null;
@@ -297,7 +205,7 @@ export const updateExpense = async (expenseId: string, updates: any) => {
         const { data, error } = await supabase.from('expenses')
             .update(dbUpdates)
             .eq('id', expenseId)
-            .eq('user_id', user.id)
+            .eq('company_id', companyId)
             .select().single();
 
         if (error) throw error;
@@ -309,21 +217,23 @@ export const updateExpense = async (expenseId: string, updates: any) => {
 
 export const deleteExpense = async (expenseId: string) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         let projectId: string | undefined;
         try {
             const { data: existing } = await supabase
                 .from('expenses')
                 .select('project_id')
                 .eq('id', expenseId)
-                .eq('user_id', user.id)
+                .eq('company_id', companyId)
                 .single();
             projectId = existing?.project_id;
         } catch { }
         const { error } = await supabase.from('expenses')
             .delete()
             .eq('id', expenseId)
-            .eq('user_id', user.id);
+            .eq('company_id', companyId);
 
         if (error) throw error;
         await updateProjectLastActivity(projectId);
@@ -336,9 +246,12 @@ export const deleteExpense = async (expenseId: string) => {
 
 export const createPayableInvoice = async (payableData: any) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         const { data, error } = await supabase.from('payable_invoices').insert({
             user_id: user.id,
+            company_id: companyId,
             vendor_name: payableData.vendorName,
             project_id: payableData.projectId || null,
             amount: payableData.amount,
@@ -358,7 +271,9 @@ export const createPayableInvoice = async (payableData: any) => {
 
 export const updatePayableInvoice = async (id: string, updates: any) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         const dbUpdates: any = {};
         if (updates.vendorName) dbUpdates.vendor_name = updates.vendorName;
         if (updates.projectId !== undefined) dbUpdates.project_id = updates.projectId || null;
@@ -371,7 +286,7 @@ export const updatePayableInvoice = async (id: string, updates: any) => {
         const { data, error } = await supabase.from('payable_invoices')
             .update(dbUpdates)
             .eq('id', id)
-            .eq('user_id', user.id)
+            .eq('company_id', companyId)
             .select().single();
 
         if (error) throw error;
@@ -383,21 +298,23 @@ export const updatePayableInvoice = async (id: string, updates: any) => {
 
 export const deletePayableInvoice = async (id: string) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         let projectId: string | undefined;
         try {
             const { data: existing } = await supabase
                 .from('payable_invoices')
                 .select('project_id')
                 .eq('id', id)
-                .eq('user_id', user.id)
+                .eq('company_id', companyId)
                 .single();
             projectId = existing?.project_id;
         } catch { }
         const { error } = await supabase.from('payable_invoices')
             .delete()
             .eq('id', id)
-            .eq('user_id', user.id);
+            .eq('company_id', companyId);
 
         if (error) throw error;
         await updateProjectLastActivity(projectId);
@@ -410,11 +327,13 @@ export const deletePayableInvoice = async (id: string) => {
 
 export const fetchCreditNotes = async (): Promise<CreditNote[]> => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         const { data, error } = await supabase
             .from('credit_notes')
             .select('*')
-            .eq('user_id', user.id);
+            .eq('company_id', companyId);
         if (error) throw error;
         return (data || []).map(mapCreditNote);
     }
@@ -423,7 +342,9 @@ export const fetchCreditNotes = async (): Promise<CreditNote[]> => {
 
 export const createCreditNote = async (data: Partial<CreditNote>) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         if (!data.invoiceId) throw new Error('Invoice ID is required');
         if (!data.projectId) throw new Error('Project ID is required');
         if (!data.amount || data.amount <= 0) throw new Error('Valid amount is required');
@@ -432,6 +353,7 @@ export const createCreditNote = async (data: Partial<CreditNote>) => {
             .from('credit_notes')
             .insert({
                 user_id: user.id,
+                company_id: companyId,
                 invoice_id: data.invoiceId,
                 project_id: data.projectId,
                 amount: data.amount,
@@ -449,7 +371,9 @@ export const createCreditNote = async (data: Partial<CreditNote>) => {
 
 export const updateCreditNote = async (id: string, updates: Partial<CreditNote>) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         const dbUpdates: any = {};
         if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
         if (updates.reason !== undefined) dbUpdates.reason = updates.reason;
@@ -459,7 +383,7 @@ export const updateCreditNote = async (id: string, updates: Partial<CreditNote>)
             .from('credit_notes')
             .update(dbUpdates)
             .eq('id', id)
-            .eq('user_id', user.id)
+            .eq('company_id', companyId)
             .select()
             .single();
 
@@ -471,12 +395,14 @@ export const updateCreditNote = async (id: string, updates: Partial<CreditNote>)
 
 export const deleteCreditNote = async (id: string) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         const { error } = await supabase
             .from('credit_notes')
             .delete()
             .eq('id', id)
-            .eq('user_id', user.id);
+            .eq('company_id', companyId);
 
         if (error) throw error;
         return { success: true };
@@ -492,7 +418,9 @@ export const fetchMonthlyAnalytics = async () => {
 
 export const updateProject = async (projectId: string, updates: any) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         const dbUpdates: any = {};
         if (updates.name !== undefined) dbUpdates.name = updates.name;
         if (updates.client !== undefined) dbUpdates.client = updates.client;
@@ -508,7 +436,7 @@ export const updateProject = async (projectId: string, updates: any) => {
         const { data, error } = await supabase.from('projects')
             .update(dbUpdates)
             .eq('id', projectId)
-            .eq('user_id', user.id)
+            .eq('company_id', companyId)
             .select();
 
         if (error) {
@@ -528,11 +456,13 @@ export const updateProject = async (projectId: string, updates: any) => {
 
 export const deleteProject = async (projectId: string) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         const { error } = await supabase.from('projects')
             .delete()
             .eq('id', projectId)
-            .eq('user_id', user.id);
+            .eq('company_id', companyId);
 
         if (error) throw error;
         return { success: true };
@@ -542,9 +472,12 @@ export const deleteProject = async (projectId: string) => {
 
 export const createProject = async (projectData: any) => {
     const user = await getUser();
-    if (user) {
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
         const { data, error } = await supabase.from('projects').insert({
             user_id: user.id,
+            company_id: companyId,
             name: projectData.name,
             client: projectData.client,
             budget: projectData.budget,
@@ -566,17 +499,18 @@ export const createProject = async (projectData: any) => {
 
 export const fetchProjectDetail = async (projectId: string): Promise<ProjectFinancialDetail> => {
     const user = await getUser();
+    const companyId = await getCompanyId();
 
     let project, invoices, expenses, payables, credits;
 
-    if (user) {
+    if (user && companyId) {
         try {
             const [p, i, e, pay, cr] = await Promise.all([
-                supabase.from('projects').select('*').eq('id', projectId).single(),
-                supabase.from('invoices').select('*').eq('project_id', projectId).eq('user_id', user.id),
-                supabase.from('expenses').select('*').eq('project_id', projectId).eq('user_id', user.id),
-                supabase.from('payable_invoices').select('*').eq('project_id', projectId).eq('user_id', user.id),
-                supabase.from('credit_notes').select('*').eq('project_id', projectId).eq('user_id', user.id)
+                supabase.from('projects').select('*').eq('id', projectId).eq('company_id', companyId).single(),
+                supabase.from('invoices').select('*').eq('project_id', projectId).eq('company_id', companyId),
+                supabase.from('expenses').select('*').eq('project_id', projectId).eq('company_id', companyId),
+                supabase.from('payable_invoices').select('*').eq('project_id', projectId).eq('company_id', companyId),
+                supabase.from('credit_notes').select('*').eq('project_id', projectId).eq('company_id', companyId)
             ]);
 
             if (p.data) {
@@ -602,4 +536,136 @@ export const fetchProjectDetail = async (projectId: string): Promise<ProjectFina
         payables || [],
         credits || []
     );
+};
+
+// --- Core Fetching ---
+
+export const fetchFinancialData = async (): Promise<FinancialData> => {
+    const user = await getUser();
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
+        try {
+            const [projects, invoices, expenses, payables, credits] = await Promise.all([
+                supabase.from('projects').select('*').eq('company_id', companyId),
+                supabase.from('invoices').select('*').eq('company_id', companyId),
+                supabase.from('expenses').select('*').eq('company_id', companyId),
+                supabase.from('payable_invoices').select('*').eq('company_id', companyId),
+                supabase.from('credit_notes').select('*').eq('company_id', companyId)
+            ]);
+
+            // Create project map
+            const projectMap: Record<string, string> = {};
+            (projects.data || []).forEach((p: any) => {
+                projectMap[p.id] = p.name;
+            });
+
+            return {
+                projects: (projects.data || []).map(mapProject),
+                invoices: (invoices.data || []).map(i => mapInvoice(i, projectMap)),
+                expenses: (expenses.data || []).map(e => mapExpense(e, projectMap)),
+                payableInvoices: (payables.data || []).map(p => mapPayable(p, projectMap)),
+                creditNotes: (credits.data || []).map(mapCreditNote)
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    throw new Error('User not authenticated or Company not found');
+};
+
+// --- Project Activity Helper ---
+const updateProjectLastActivity = async (projectId?: string) => {
+    if (!projectId) return;
+    const companyId = await getCompanyId();
+    const nowIso = new Date().toISOString();
+    if (companyId) {
+        try {
+            await supabase
+                .from('projects')
+                .update({ last_activity_date: nowIso })
+                .eq('id', projectId)
+                .eq('company_id', companyId);
+        } catch (err) {
+            console.warn('Failed to update last activity date:', err);
+        }
+        return;
+    }
+};
+
+const ensureProjectFirstActivity = async (projectId?: string, activityDateIso?: string) => {
+    if (!projectId || !activityDateIso) return;
+    const companyId = await getCompanyId();
+    if (companyId) {
+        try {
+            await supabase
+                .from('projects')
+                .update({ first_activity_date: activityDateIso })
+                .eq('id', projectId)
+                .eq('company_id', companyId)
+                .is('first_activity_date', null);
+        } catch (err) {
+            console.warn('Failed to set first activity date:', err);
+        }
+        return;
+    }
+};
+
+export const fetchCompany = async () => {
+    const user = await getUser();
+    if (user) {
+        // Fetch via company_users to get the linked company
+        const { data } = await supabase
+            .from('company_users')
+            .select('company:companies(*)')
+            .eq('user_id', user.id)
+            .single();
+
+        if (data && data.company) {
+            // Fix: Handle both array (one-to-many inferred) or object (one-to-one inferred)
+            const co = Array.isArray(data.company) ? data.company[0] : data.company;
+
+            if (!co) return null;
+
+            return {
+                name: co.name,
+                industry: co.industry,
+                currency: co.currency,
+                fiscalYearStart: co.fiscal_year_start || co.fiscalYearStart || 'January',
+                joinCode: co.join_code,
+                id: co.id
+            };
+        }
+    }
+    return null;
+};
+
+export const updateCompany = async (companyData: any) => {
+    const user = await getUser();
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
+        // Update company
+        const { data, error } = await supabase.from('companies').update({
+            name: companyData.name,
+            industry: companyData.industry,
+            currency: companyData.currency,
+            fiscal_year_start: companyData.fiscalYearStart || 'January'
+        })
+            .eq('id', companyId) // Filter by company ID
+            .select().single();
+
+        if (!error && data) {
+            return {
+                name: data.name,
+                industry: data.industry,
+                currency: data.currency,
+                fiscalYearStart: data.fiscal_year_start || 'January',
+                joinCode: data.join_code,
+                id: data.id
+            };
+        }
+    }
+    throw new Error('User not authenticated');
 };

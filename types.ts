@@ -7,6 +7,15 @@ export interface Company {
   industry: string;
   currency: string;
   fiscalYearStart: string;
+  joinCode?: string;
+  id?: string;
+}
+
+export interface CompanyUser {
+  id: string;
+  companyId: string;
+  userId: string;
+  role: 'admin' | 'member';
 }
 
 export interface Profile {

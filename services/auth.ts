@@ -9,54 +9,74 @@ export const login = async (email, password) => {
 
     if (error) throw error;
 
-    // Fetch company details
-    const { data: company } = await supabase
-        .from('companies')
-        .select('*')
+    // Fetch company association
+    // We get the company via the company_users table
+    const { data: companyUser, error: companyError } = await supabase
+        .from('company_users')
+        .select('role, company:companies(*)')
         .eq('user_id', data.user.id)
         .single();
+
+    if (companyError && companyError.code !== 'PGRST116') {
+        // Log error but don't fail login if user has no company yet (edge case)
+        console.error("Error fetching company:", companyError);
+    }
 
     return {
         token: data.session?.access_token,
         user: data.user,
-        company
+        company: companyUser?.company,
+        role: companyUser?.role
     };
 };
 
-export const signup = async (username, email, password, companyName, currency) => {
+export const signup = async (username, email, password, companyName, currency, joinCode) => {
+    // 1. Sign up the user
     let { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-            data: {
-                username,
-            }
+            data: { username }
         }
     });
 
     if (error) throw error;
 
     if (data.session && data.user) {
-        const { error: companyError } = await supabase.from('companies').insert({
-            user_id: data.user.id,
-            name: companyName,
-            currency: currency || 'USD',
-            industry: 'Technology',
-            fiscal_year_start: 'January'
-        });
+        let company;
+        let role = 'member';
 
-        if (companyError) {
-            console.error("Failed to create company:", companyError);
+        // 2. Determine: Create Company OR Join Company
+        if (joinCode) {
+            // JOIN Mode
+            const { data: joinData, error: joinError } = await supabase
+                .rpc('join_company_by_code', { code: joinCode });
+
+            if (joinError) throw joinError; // Invalid code probably
+            company = joinData;
+
+        } else if (companyName) {
+            // CREATE Mode
+            const { data: createData, error: createError } = await supabase
+                .rpc('create_company_with_admin', {
+                    name: companyName,
+                    currency: currency || 'USD'
+                });
+
+            if (createError) throw createError;
+            company = createData;
+            role = 'admin';
         }
 
         return {
             token: data.session.access_token,
             user: data.user,
-            company: { name: companyName, currency }
+            company,
+            role
         };
     }
 
-    // Hard fail if immediate login not possible (indicates Confirm email still ON)
+    // Hard fail if immediate login not possible (Confirm email ON)
     throw new Error('Immediate login failed. Please disable "Confirm email" in Supabase Auth settings.');
 };
 

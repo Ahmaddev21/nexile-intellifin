@@ -7,7 +7,8 @@ interface AuthPageProps {
 }
 
 const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
-    const [isLogin, setIsLogin] = useState(true);
+    // Modes: 'login' | 'signup-create' | 'signup-join'
+    const [authMode, setAuthMode] = useState<'login' | 'signup-create' | 'signup-join'>('login');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -16,7 +17,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
         email: '',
         password: '',
         companyName: '',
-        currency: 'USD'
+        currency: 'USD',
+        joinCode: ''
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -25,16 +27,18 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
         setError('');
 
         try {
-            if (isLogin) {
-                const { token, user, company } = await login(formData.email, formData.password);
+            if (authMode === 'login') {
+                const { token, user, company, role } = await login(formData.email, formData.password);
                 onLogin(token, user, company);
             } else {
-                const { token, user, company } = await signup(
+                // Signup (Create or Join)
+                const { token, user, company, role } = await signup(
                     formData.username,
                     formData.email,
                     formData.password,
-                    formData.companyName,
-                    formData.currency
+                    authMode === 'signup-create' ? formData.companyName : undefined, // Only send name if creating
+                    authMode === 'signup-create' ? formData.currency : undefined,
+                    authMode === 'signup-join' ? formData.joinCode : undefined // Only send code if joining
                 );
                 onLogin(token, user, company);
             }
@@ -59,10 +63,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                         <Rocket className="w-8 h-8 text-white" />
                     </div>
                     <h2 className="text-3xl font-heading font-bold text-white mb-2">
-                        {isLogin ? 'Welcome Back' : 'Join Nexile'}
+                        {authMode === 'login' ? 'Welcome Back' : authMode === 'signup-create' ? 'Create Workspace' : 'Join Team'}
                     </h2>
                     <p className="text-slate-400">
-                        {isLogin ? 'Enter your credentials to access the terminal' : 'Create your financial command center'}
+                        {authMode === 'login'
+                            ? 'Enter your credentials to access the terminal'
+                            : authMode === 'signup-create'
+                                ? 'Initialize a new financial command center'
+                                : 'Enter your team code to access the workspace'}
                     </p>
                 </div>
 
@@ -74,7 +82,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {!isLogin && (
+                    {authMode !== 'login' && (
                         <>
                             <div className="relative group">
                                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5 transition-colors group-focus-within:text-indigo-400" />
@@ -87,31 +95,49 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                                     required
                                 />
                             </div>
-                            <div className="relative group">
-                                <Rocket className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5 transition-colors group-focus-within:text-indigo-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Company Name"
-                                    value={formData.companyName}
-                                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                                    className="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all focus:bg-slate-900/80"
-                                    required
-                                />
-                            </div>
-                            <div className="relative group">
-                                <select
-                                    value={formData.currency}
-                                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                                    className="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-4 pl-4 pr-4 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all focus:bg-slate-900/80 appearance-none"
-                                >
-                                    <option value="USD">USD ($)</option>
-                                    <option value="EUR">EUR (€)</option>
-                                    <option value="GBP">GBP (£)</option>
-                                    <option value="AED">AED (د.إ)</option>
-                                    <option value="SAR">SAR (﷼)</option>
-                                    <option value="QAR">QAR (QR)</option>
-                                </select>
-                            </div>
+
+                            {authMode === 'signup-create' ? (
+                                <>
+                                    <div className="relative group">
+                                        <Rocket className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5 transition-colors group-focus-within:text-indigo-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Company Name"
+                                            value={formData.companyName}
+                                            onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                                            className="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all focus:bg-slate-900/80"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="relative group">
+                                        <select
+                                            value={formData.currency}
+                                            onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                                            className="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-4 pl-4 pr-4 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all focus:bg-slate-900/80 appearance-none"
+                                        >
+                                            <option value="USD">USD ($)</option>
+                                            <option value="EUR">EUR (€)</option>
+                                            <option value="GBP">GBP (£)</option>
+                                            <option value="AED">AED (د.إ)</option>
+                                            <option value="SAR">SAR (﷼)</option>
+                                            <option value="QAR">QAR (QR)</option>
+                                        </select>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="relative group">
+                                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5 transition-colors group-focus-within:text-indigo-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Enter 6-Digit Join Code"
+                                        value={formData.joinCode}
+                                        onChange={(e) => setFormData({ ...formData, joinCode: e.target.value.toUpperCase() })}
+                                        className="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all focus:bg-slate-900/80 tracking-widest font-mono"
+                                        required
+                                        maxLength={6}
+                                    />
+                                </div>
+                            )}
                         </>
                     )}
 
@@ -148,7 +174,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                             <Loader2 className="w-5 h-5 animate-spin" />
                         ) : (
                             <>
-                                {isLogin ? 'Sign In' : 'Get Started'}
+                                {authMode === 'login' ? 'Sign In' : authMode === 'signup-create' ? 'Create Company' : 'Join Team'}
                                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                             </>
                         )}
@@ -156,13 +182,30 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                     </button>
                 </form>
 
-                <div className="mt-8 text-center">
-                    <button
-                        onClick={() => setIsLogin(!isLogin)}
-                        className="text-slate-400 hover:text-white transition-colors text-sm font-medium"
-                    >
-                        {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
-                    </button>
+                <div className="mt-8 text-center flex flex-col gap-2">
+                    {authMode === 'login' ? (
+                        <>
+                            <button
+                                onClick={() => setAuthMode('signup-create')}
+                                className="text-slate-400 hover:text-white transition-colors text-sm font-medium"
+                            >
+                                Don't have an account? Create Company
+                            </button>
+                            <button
+                                onClick={() => setAuthMode('signup-join')}
+                                className="text-indigo-400 hover:text-indigo-300 transition-colors text-sm font-medium"
+                            >
+                                Have a team code? Join Existing
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            onClick={() => setAuthMode('login')}
+                            className="text-slate-400 hover:text-white transition-colors text-sm font-medium"
+                        >
+                            Already have an account? Sign In
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
