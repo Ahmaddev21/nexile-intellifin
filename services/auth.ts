@@ -68,3 +68,41 @@ export const getMe = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     return user;
 };
+
+export const uploadAvatar = async (file) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+    if (uploadError) {
+        throw uploadError;
+    }
+
+    const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    return data.publicUrl;
+};
+
+export const updateProfileAvatar = async (userId, avatarUrl) => {
+    const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', userId);
+
+    if (error) throw error;
+
+    return avatarUrl;
+};
+
+export const getProfile = async (userId) => {
+    const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+    return data;
+};

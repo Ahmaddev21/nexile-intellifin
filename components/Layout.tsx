@@ -14,8 +14,11 @@ import {
   X,
   Sun,
   Moon,
-  Clock as ClockIcon
+  Clock as ClockIcon,
+  Camera,
+  Loader2
 } from 'lucide-react';
+import { uploadAvatar, updateProfileAvatar, getProfile, getMe } from '../services/auth';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -45,6 +48,51 @@ const DigitalClock: React.FC = () => {
 
 const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, theme, onThemeToggle, userName, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const user = await getMe();
+        if (user) {
+          setUserId(user.id);
+          // Try fetching profile
+          const profile = await getProfile(user.id);
+          if (profile && profile.avatar_url) {
+            setAvatarUrl(profile.avatar_url);
+          }
+        }
+      } catch (e) {
+        console.error("Error loading profile", e);
+      }
+    };
+    loadProfile();
+  }, [userName]); // Reload if userName changes (e.g. login)
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !userId) return;
+
+    setIsUploading(true);
+    try {
+      const publicUrl = await uploadAvatar(file);
+      await updateProfileAvatar(userId, publicUrl);
+      setAvatarUrl(publicUrl);
+      // alert("Avatar updated!");
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      alert("Failed to upload avatar.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const navItems = [
     { id: 'dashboard', label: 'Intelligence', icon: LayoutDashboard },
@@ -158,8 +206,28 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, the
                 <div className="text-sm font-bold text-slate-900 dark:text-white leading-tight">{userName || 'Financial User'}</div>
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Command Center</div>
               </div>
-              <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-2xl flex items-center justify-center border-2 border-white dark:border-slate-800 shadow-sm overflow-hidden ring-2 ring-indigo-500/20">
-                <img src={`https://picsum.photos/seed/${userName || 'Sarah'}/100/100`} alt="Avatar" className="w-full h-full object-cover" />
+              <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-2xl flex items-center justify-center border-2 border-white dark:border-slate-800 shadow-sm overflow-hidden ring-2 ring-indigo-500/20 relative group cursor-pointer" onClick={handleAvatarClick}>
+                {isUploading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-600 dark:text-indigo-400" />
+                ) : (
+                  <>
+                    <img
+                      src={avatarUrl || `https://picsum.photos/seed/${userName || 'Sarah'}/100/100`}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/30 hidden group-hover:flex items-center justify-center transition-all">
+                      <Camera className="w-4 h-4 text-white opacity-80" />
+                    </div>
+                  </>
+                )}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
               </div>
             </div>
           </div>

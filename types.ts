@@ -9,6 +9,13 @@ export interface Company {
   fiscalYearStart: string;
 }
 
+export interface Profile {
+  id: string;
+  username: string;
+  avatar_url?: string;
+  subscription_status: string;
+}
+
 export interface Invoice {
   id: string;
   customId?: string;
