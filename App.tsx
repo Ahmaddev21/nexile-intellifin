@@ -456,9 +456,17 @@ const App: React.FC = () => {
 
               {/* Error Display for Onboarding */}
               {onboardingError && (
-                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3 text-rose-300 text-sm">
-                  <Shield className="w-5 h-5 flex-shrink-0" />
-                  <span>{onboardingError}</span>
+                <div className="flex flex-col gap-4">
+                  <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3 text-rose-300 text-sm">
+                    <Shield className="w-5 h-5 flex-shrink-0" />
+                    <span>{onboardingError}</span>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold py-3 rounded-2xl transition-all border border-rose-500/20"
+                  >
+                    Sign Out & Try Again
+                  </button>
                 </div>
               )}
 
