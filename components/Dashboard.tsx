@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, TrendingDown, Target, Wallet, BrainCircuit, Award } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Wallet, BrainCircuit, Award, RefreshCw } from 'lucide-react';
 import { FinancialData, AIInsight, UserProgress, Company, MonthlyMetrics, ComparisonPeriod } from '../types';
 import GamificationWidget from './GamificationWidget';
 import MetricCard from './MetricCard';
@@ -11,6 +11,7 @@ import MonthSelector from './MonthSelector';
 import { getMonthlyInsights } from '../services/geminiService';
 import { calculateMonthlyMetrics } from '../utils/financialCalculations';
 import RevenueBreakdownModal from './RevenueBreakdownModal';
+import { regenerateJoinCode } from '../services/api';
 
 interface DashboardProps {
   data: FinancialData;
@@ -131,8 +132,32 @@ const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights
         <div className="flex items-center gap-4">
           {company?.joinCode && (
             <div className="hidden md:block text-right border-r border-slate-200 dark:border-slate-800 pr-4 mr-1">
-              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Team Code</span>
-              <div className="font-mono font-bold text-lg text-indigo-600 dark:text-indigo-400 tracking-widest">{company.joinCode}</div>
+              <div className="flex items-center justify-end gap-2 group relative">
+                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Team Code</span>
+                <button
+                  onClick={async () => {
+                    if (!window.confirm('Regenerate Team Code? The old code will stop working.')) return;
+                    setIsLoadingMonthly(true); // Reuse loading state for spinner
+                    try {
+                      const newCode = await regenerateJoinCode();
+                      // Ideally perform a full reload or local update, for now alert + reload is safest
+                      alert(`New Code Generated: ${newCode}`);
+                      window.location.reload();
+                    } catch (e: any) {
+                      alert('Failed to regenerate code: ' + e.message);
+                    } finally {
+                      setIsLoadingMonthly(false);
+                    }
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md"
+                  title="Regenerate Code"
+                >
+                  <RefreshCw className="w-3 h-3 text-slate-400" />
+                </button>
+              </div>
+              <div className="font-mono font-bold text-lg text-indigo-600 dark:text-indigo-400 tracking-widest">
+                {company?.joinCode || <span className="text-slate-300 text-sm italic">No Code</span>}
+              </div>
             </div>
           )}
           <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 px-4 py-2 rounded-2xl flex items-center gap-3">

@@ -669,3 +669,9 @@ export const updateCompany = async (companyData: any) => {
     }
     throw new Error('User not authenticated');
 };
+
+export const regenerateJoinCode = async () => {
+    const { data, error } = await supabase.rpc('regenerate_join_code');
+    if (error) throw error;
+    return data as string;
+};
