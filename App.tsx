@@ -336,10 +336,16 @@ const App: React.FC = () => {
         </div>
 
         <div className="max-w-md w-full glass-panel border-white/10 bg-white/5 rounded-[3rem] p-10 shadow-2xl relative z-10 border">
-          <div className="flex justify-center mb-10">
+          <div className="flex justify-between items-start mb-10 relative">
             <div className="w-16 h-16 bg-indigo-600 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-indigo-900/50">
               <Rocket className="w-8 h-8 text-white" />
             </div>
+            <button
+              onClick={handleLogout}
+              className="text-xs font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-colors py-2 px-4 border border-white/5 hover:border-white/20 rounded-xl"
+            >
+              Sign Out
+            </button>
           </div>
 
           <div className="mb-8 flex gap-2">
