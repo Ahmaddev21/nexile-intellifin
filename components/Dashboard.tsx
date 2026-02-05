@@ -149,10 +149,10 @@ const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights
                       setIsLoadingMonthly(false);
                     }
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md"
+                  className="text-slate-400 hover:text-indigo-600 transition-colors p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md"
                   title="Regenerate Code"
                 >
-                  <RefreshCw className="w-3 h-3 text-slate-400" />
+                  <RefreshCw className="w-3 h-3" />
                 </button>
               </div>
               <div className="font-mono font-bold text-lg text-indigo-600 dark:text-indigo-400 tracking-widest">
