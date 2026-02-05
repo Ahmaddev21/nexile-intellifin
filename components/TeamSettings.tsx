@@ -73,7 +73,8 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate }) => {
                         <div className="flex flex-col sm:flex-row gap-3">
                             <button
                                 onClick={handleCopy}
-                                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+                                disabled={!company.joinCode}
+                                className={`flex-1 flex items-center justify-center gap-2 font-bold py-3 rounded-xl transition-all shadow-lg dark:shadow-none ${company.joinCode ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'}`}
                             >
                                 {copied ? <CheckCircle2 className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                                 {copied ? 'Copied!' : 'Copy Code'}
@@ -84,7 +85,7 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate }) => {
                                 className="flex-1 flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 font-bold py-3 rounded-xl transition-all"
                             >
                                 <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-                                Regenerate
+                                {company.joinCode ? 'Regenerate' : 'Generate Code'}
                             </button>
                         </div>
                     </div>

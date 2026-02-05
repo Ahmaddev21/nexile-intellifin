@@ -174,8 +174,15 @@ const App: React.FC = () => {
       setFinancialData({ projects: [], invoices: [], expenses: [], payableInvoices: [], creditNotes: [] });
 
       // Force fresh Supabase fetch
-      const data = await fetchFinancialData();
+      const [data, companyData] = await Promise.all([
+        fetchFinancialData(),
+        import('./services/api').then(m => m.fetchCompany())
+      ]);
+
       setFinancialData(data);
+      if (companyData) {
+        setCompany(companyData);
+      }
 
       // Recalculate AI insights if we have data
       if (data.invoices.length > 0 || data.projects.length > 0) {
