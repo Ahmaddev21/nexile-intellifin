@@ -6,6 +6,7 @@ import { updateInvoice, deleteInvoice, updateExpense, deleteExpense, updatePayab
 interface WorkspaceProps {
   data: FinancialData;
   currencySymbol: string;
+  userRole: 'admin' | 'member';
   onCategorize?: (expenseId: string, event: React.MouseEvent) => void;
   onAddInvoice: () => void;
   onAddExpense: () => void;
@@ -18,7 +19,7 @@ interface WorkspaceProps {
   onDataRefresh: () => void;
 }
 
-const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, onCategorize, onAddInvoice, onAddExpense, onAddPayable, onAddCreditNote, onEditInvoice, onEditExpense, onEditPayable, onEditCreditNote, onDataRefresh }) => {
+const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, onCategorize, onAddInvoice, onAddExpense, onAddPayable, onAddCreditNote, onEditInvoice, onEditExpense, onEditPayable, onEditCreditNote, onDataRefresh }) => {
   const [activeTab, setActiveTab] = useState<'invoices' | 'expenses' | 'payables' | 'credit_notes'>('invoices');
   const [searchTerm, setSearchTerm] = useState('');
   const [categorizedIds, setCategorizedIds] = useState<Set<string>>(new Set());
@@ -186,17 +187,19 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, onCategoriz
               className="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50 w-full sm:w-64 text-slate-900 dark:text-white"
             />
           </div>
-          <button
-            onClick={() => {
-              if (activeTab === 'invoices') onAddInvoice();
-              else if (activeTab === 'expenses') onAddExpense();
-              else if (activeTab === 'payables') onAddPayable();
-              else onAddCreditNote();
-            }}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-2xl font-bold text-sm transition-colors whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" /> Add {activeTab === 'invoices' ? 'Invoice' : activeTab === 'expenses' ? 'Expense' : activeTab === 'payables' ? 'Bill' : 'Credit Note'}
-          </button>
+          {userRole === 'admin' && (
+            <button
+              onClick={() => {
+                if (activeTab === 'invoices') onAddInvoice();
+                else if (activeTab === 'expenses') onAddExpense();
+                else if (activeTab === 'payables') onAddPayable();
+                else onAddCreditNote();
+              }}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-2xl font-bold text-sm transition-colors whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" /> Add {activeTab === 'invoices' ? 'Invoice' : activeTab === 'expenses' ? 'Expense' : activeTab === 'payables' ? 'Bill' : 'Credit Note'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -248,32 +251,36 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, onCategoriz
                     )}
                   </td>
                   <td className="px-6 py-4 text-right relative">
-                    <button
-                      onClick={() => setActiveMenuId(activeMenuId === inv.id ? null : inv.id)}
-                      className={`transition-all p-2 rounded-xl ${activeMenuId === inv.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                    >
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
+                    {userRole === 'admin' && (
+                      <>
+                        <button
+                          onClick={() => setActiveMenuId(activeMenuId === inv.id ? null : inv.id)}
+                          className={`transition-all p-2 rounded-xl ${activeMenuId === inv.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                        >
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
 
-                    {activeMenuId === inv.id && (
-                      <div
-                        ref={menuRef}
-                        className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
-                      >
-                        <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Change Status</div>
-                        <div className="grid grid-cols-1 gap-1">
-                          <ActionItem icon={<Clock className="w-4 h-4" />} label="Set to Draft" onClick={() => handleStatusUpdate(inv.id, 'draft')} active={inv.status === 'draft'} />
-                          <ActionItem icon={<Send className="w-4 h-4" />} label="Mark as Sent" onClick={() => handleStatusUpdate(inv.id, 'sent')} active={inv.status === 'sent'} />
-                          <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Mark as Paid" onClick={() => handleStatusUpdate(inv.id, 'paid')} active={inv.status === 'paid'} />
-                          <ActionItem icon={<AlertCircle className="w-4 h-4 text-rose-500" />} label="Mark Overdue" onClick={() => handleStatusUpdate(inv.id, 'overdue')} active={inv.status === 'overdue'} />
-                          <ActionItem icon={<Ban className="w-4 h-4" />} label="Cancel Invoice" onClick={() => handleStatusUpdate(inv.id, 'cancelled')} active={inv.status === 'cancelled'} />
-                        </div>
-                        <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
-                        <div className="grid grid-cols-1 gap-1">
-                          <ActionItem icon={<Edit3 className="w-4 h-4" />} label="Edit Details" onClick={() => { onEditInvoice?.(inv); setActiveMenuId(null); }} />
-                          <ActionItem icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete Invoice" onClick={() => handleDelete(inv.id)} variant="danger" />
-                        </div>
-                      </div>
+                        {activeMenuId === inv.id && (
+                          <div
+                            ref={menuRef}
+                            className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
+                          >
+                            <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Change Status</div>
+                            <div className="grid grid-cols-1 gap-1">
+                              <ActionItem icon={<Clock className="w-4 h-4" />} label="Set to Draft" onClick={() => handleStatusUpdate(inv.id, 'draft')} active={inv.status === 'draft'} />
+                              <ActionItem icon={<Send className="w-4 h-4" />} label="Mark as Sent" onClick={() => handleStatusUpdate(inv.id, 'sent')} active={inv.status === 'sent'} />
+                              <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Mark as Paid" onClick={() => handleStatusUpdate(inv.id, 'paid')} active={inv.status === 'paid'} />
+                              <ActionItem icon={<AlertCircle className="w-4 h-4 text-rose-500" />} label="Mark Overdue" onClick={() => handleStatusUpdate(inv.id, 'overdue')} active={inv.status === 'overdue'} />
+                              <ActionItem icon={<Ban className="w-4 h-4" />} label="Cancel Invoice" onClick={() => handleStatusUpdate(inv.id, 'cancelled')} active={inv.status === 'cancelled'} />
+                            </div>
+                            <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
+                            <div className="grid grid-cols-1 gap-1">
+                              <ActionItem icon={<Edit3 className="w-4 h-4" />} label="Edit Details" onClick={() => { onEditInvoice?.(inv); setActiveMenuId(null); }} />
+                              <ActionItem icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete Invoice" onClick={() => handleDelete(inv.id)} variant="danger" />
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </td>
                 </tr>
@@ -295,27 +302,31 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, onCategoriz
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{exp.date}</td>
                   <td className="px-6 py-4 text-right relative">
-                    <button
-                      onClick={() => setActiveMenuId(activeMenuId === exp.id ? null : exp.id)}
-                      className={`transition-all p-2 rounded-xl ${activeMenuId === exp.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                    >
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
-                    {activeMenuId === exp.id && (
-                      <div
-                        ref={menuRef}
-                        className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
-                      >
-                        <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Actions</div>
-                        <div className="grid grid-cols-1 gap-1">
-                          <ActionItem icon={<Edit3 className="w-4 h-4" />} label="Edit Details" onClick={() => { onEditExpense?.(exp); setActiveMenuId(null); }} />
-                          <ActionItem icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete Expense" onClick={() => {
-                            if (window.confirm('Delete this expense?')) {
-                              deleteExpense(exp.id).then(onDataRefresh);
-                            }
-                          }} variant="danger" />
-                        </div>
-                      </div>
+                    {userRole === 'admin' && (
+                      <>
+                        <button
+                          onClick={() => setActiveMenuId(activeMenuId === exp.id ? null : exp.id)}
+                          className={`transition-all p-2 rounded-xl ${activeMenuId === exp.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                        >
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+                        {activeMenuId === exp.id && (
+                          <div
+                            ref={menuRef}
+                            className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
+                          >
+                            <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Actions</div>
+                            <div className="grid grid-cols-1 gap-1">
+                              <ActionItem icon={<Edit3 className="w-4 h-4" />} label="Edit Details" onClick={() => { onEditExpense?.(exp); setActiveMenuId(null); }} />
+                              <ActionItem icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete Expense" onClick={() => {
+                                if (window.confirm('Delete this expense?')) {
+                                  deleteExpense(exp.id).then(onDataRefresh);
+                                }
+                              }} variant="danger" />
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </td>
                 </tr>
@@ -346,26 +357,30 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, onCategoriz
                     )}
                   </td>
                   <td className="px-6 py-4 text-right relative">
-                    <button
-                      onClick={() => setActiveMenuId(activeMenuId === pay.id ? null : pay.id)}
-                      className="text-slate-300 dark:text-slate-600 hover:text-indigo-600 transition-colors p-1"
-                    >
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
-                    {activeMenuId === pay.id && (
-                      <div
-                        ref={menuRef}
-                        className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
-                      >
-                        <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Actions</div>
-                        <div className="grid grid-cols-1 gap-1">
-                          <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Mark Paid" onClick={() => handlePayableAction(pay.id, 'status', 'paid')} active={pay.status === 'paid'} />
-                          <ActionItem icon={<AlertCircle className="w-4 h-4 text-rose-500" />} label="Mark Overdue" onClick={() => handlePayableAction(pay.id, 'status', 'overdue')} active={pay.status === 'overdue'} />
-                          <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
-                          <ActionItem icon={<Edit3 className="w-4 h-4" />} label="Edit" onClick={() => { onEditPayable?.(pay); setActiveMenuId(null); }} />
-                          <ActionItem icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete" onClick={() => handlePayableAction(pay.id, 'delete')} variant="danger" />
-                        </div>
-                      </div>
+                    {userRole === 'admin' && (
+                      <>
+                        <button
+                          onClick={() => setActiveMenuId(activeMenuId === pay.id ? null : pay.id)}
+                          className="text-slate-300 dark:text-slate-600 hover:text-indigo-600 transition-colors p-1"
+                        >
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+                        {activeMenuId === pay.id && (
+                          <div
+                            ref={menuRef}
+                            className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
+                          >
+                            <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Actions</div>
+                            <div className="grid grid-cols-1 gap-1">
+                              <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Mark Paid" onClick={() => handlePayableAction(pay.id, 'status', 'paid')} active={pay.status === 'paid'} />
+                              <ActionItem icon={<AlertCircle className="w-4 h-4 text-rose-500" />} label="Mark Overdue" onClick={() => handlePayableAction(pay.id, 'status', 'overdue')} active={pay.status === 'overdue'} />
+                              <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
+                              <ActionItem icon={<Edit3 className="w-4 h-4" />} label="Edit" onClick={() => { onEditPayable?.(pay); setActiveMenuId(null); }} />
+                              <ActionItem icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete" onClick={() => handlePayableAction(pay.id, 'delete')} variant="danger" />
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </td>
                 </tr>
@@ -398,26 +413,30 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, onCategoriz
                     )}
                   </td>
                   <td className="px-6 py-4 text-right relative">
-                    <button
-                      onClick={() => setActiveMenuId(activeMenuId === cn.id ? null : cn.id)}
-                      className="text-slate-300 dark:text-slate-600 hover:text-indigo-600 transition-colors p-1"
-                    >
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
-                    {activeMenuId === cn.id && (
-                      <div
-                        ref={menuRef}
-                        className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
-                      >
-                        <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Actions</div>
-                        <div className="grid grid-cols-1 gap-1">
-                          <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Set Applied" onClick={() => handleCreditNoteAction(cn.id, 'status', 'applied')} active={cn.status === 'applied'} />
-                          <ActionItem icon={<Ban className="w-4 h-4" />} label="Void Credit" onClick={() => handleCreditNoteAction(cn.id, 'status', 'void')} active={cn.status === 'void'} />
-                          <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
-                          <ActionItem icon={<Edit3 className="w-4 h-4" />} label="Edit" onClick={() => { onEditCreditNote?.(cn); setActiveMenuId(null); }} />
-                          <ActionItem icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete" onClick={() => handleCreditNoteAction(cn.id, 'delete')} variant="danger" />
-                        </div>
-                      </div>
+                    {userRole === 'admin' && (
+                      <>
+                        <button
+                          onClick={() => setActiveMenuId(activeMenuId === cn.id ? null : cn.id)}
+                          className="text-slate-300 dark:text-slate-600 hover:text-indigo-600 transition-colors p-1"
+                        >
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+                        {activeMenuId === cn.id && (
+                          <div
+                            ref={menuRef}
+                            className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
+                          >
+                            <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Actions</div>
+                            <div className="grid grid-cols-1 gap-1">
+                              <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Set Applied" onClick={() => handleCreditNoteAction(cn.id, 'status', 'applied')} active={cn.status === 'applied'} />
+                              <ActionItem icon={<Ban className="w-4 h-4" />} label="Void Credit" onClick={() => handleCreditNoteAction(cn.id, 'status', 'void')} active={cn.status === 'void'} />
+                              <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
+                              <ActionItem icon={<Edit3 className="w-4 h-4" />} label="Edit" onClick={() => { onEditCreditNote?.(cn); setActiveMenuId(null); }} />
+                              <ActionItem icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete" onClick={() => handleCreditNoteAction(cn.id, 'delete')} variant="danger" />
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </td>
                 </tr>
@@ -425,6 +444,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, onCategoriz
             )}
           </tbody>
         </table>
+
         {(activeTab === 'invoices' ? filteredInvoices : activeTab === 'expenses' ? filteredExpenses : activeTab === 'payables' ? filteredPayables : filteredCreditNotes).length === 0 && (
           <div className="p-12 text-center">
             <div className="bg-slate-50 dark:bg-slate-800 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4">
@@ -434,7 +454,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, onCategoriz
             <p className="text-slate-400 dark:text-slate-500 text-sm">Try adjusting your search terms</p>
           </div>
         )}
-      </div>
+      </div >
 
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 px-6">
         <div className="text-sm text-slate-400 dark:text-slate-500">
@@ -445,7 +465,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, onCategoriz
           <button className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 rounded-xl text-sm font-bold text-white shadow-md shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-colors">Next</button>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

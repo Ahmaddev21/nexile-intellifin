@@ -641,6 +641,16 @@ export const fetchCompany = async () => {
     return null;
 };
 
+export const getUserRole = async (userId: string) => {
+    const { data } = await supabase
+        .from('company_users')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+
+    return data?.role as 'admin' | 'member' | undefined;
+};
+
 export const updateCompany = async (companyData: any) => {
     const user = await getUser();
     const companyId = await getCompanyId();

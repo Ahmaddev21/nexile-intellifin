@@ -41,6 +41,7 @@ const App: React.FC = () => {
   const [modalType, setModalType] = useState<'invoice' | 'expense' | 'payable' | 'credit_note'>('invoice');
   const [editingTransaction, setEditingTransaction] = useState<any | null>(null);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<'admin' | 'member'>('member');
 
   const [company, setCompany] = useState<Company>({
     name: '',
@@ -74,11 +75,26 @@ const App: React.FC = () => {
         const username = userData.user_metadata?.username || userData.email || 'User';
         setUserName(username);
         localStorage.setItem('userName', username);
+
+        // Try to recover role from local storage or default to member until refreshed
+        const savedRole = localStorage.getItem('userRole') as 'admin' | 'member';
+        if (savedRole) setUserRole(savedRole);
       }
 
       if (companyData) {
         setCompany(companyData);
         setIsSetupComplete(true);
+        // If we have company data, we should also fetch the role specifically if not in localstorage or to verify
+        // For now, simpler to rely on auth login return, but for page reload we need to fetch it.
+        // Let's add a quick fetch for role here if we have a user
+        if (userData?.id) {
+          import('./services/api').then(m => m.getUserRole(userData.id)).then(role => {
+            if (role) {
+              setUserRole(role);
+              localStorage.setItem('userRole', role);
+            }
+          });
+        }
       } else {
         // Only force onboarding if it's truly a new user without a company
         setIsSetupComplete(false);
@@ -102,13 +118,17 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogin = (newToken: string, user: any, companyData?: any) => {
+  const handleLogin = (newToken: string, user: any, companyData?: any, role: 'admin' | 'member' = 'member') => {
     localStorage.setItem('token', newToken);
     // Supabase User object puts custom fields in user_metadata
     const username = user.user_metadata?.username || user.email || 'User';
     localStorage.setItem('userName', username);
+    localStorage.setItem('userRole', role);
+
     setToken(newToken);
     setUserName(username);
+    setUserRole(role);
+
     if (companyData) {
       setCompany(companyData);
       setIsSetupComplete(true);
@@ -120,8 +140,10 @@ const App: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
     setToken(null);
     setUserName('');
+    setUserRole('member');
     setIsSetupComplete(false);
     setFinancialData({ projects: [], invoices: [], expenses: [], payableInvoices: [], creditNotes: [] });
   };
@@ -138,6 +160,10 @@ const App: React.FC = () => {
       const updatedCompany = await import('./services/api').then(m => m.updateCompany(company));
       setCompany(updatedCompany);
       setIsSetupComplete(true);
+      // Creator is always admin
+      setUserRole('admin');
+      localStorage.setItem('userRole', 'admin');
+
       await refreshData();
     } catch (error: any) {
       console.error('Failed to save company settings:', error);
@@ -505,6 +531,7 @@ const App: React.FC = () => {
         return (
           <Workspace
             data={financialData}
+            userRole={userRole}
             currencySymbol={currencySymbol}
             onCategorize={handleCategorizeExpense}
             onAddInvoice={() => { setModalType('invoice'); setEditingTransaction(null); setIsModalOpen(true); }}
@@ -523,7 +550,7 @@ const App: React.FC = () => {
       case 'projects':
         return <Projects data={financialData} currencySymbol={currencySymbol} onDataRefresh={refreshData} />;
       case 'team':
-        return <TeamSettings company={company} onUpdate={refreshData} />;
+        return <TeamSettings company={company} onUpdate={refreshData} userRole={userRole} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center py-20 glass-panel rounded-[3rem] border border-slate-100 dark:border-slate-800">
