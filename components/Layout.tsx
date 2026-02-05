@@ -97,8 +97,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, the
   const navItems = [
     { id: 'dashboard', label: 'Intelligence', icon: LayoutDashboard },
     { id: 'workspace', label: 'Workspace', icon: Table2 },
-    { id: 'ai-analyst', label: 'AI Analyst', icon: BrainCircuit },
     { id: 'projects', label: 'Projects', icon: Briefcase },
+    { id: 'ai-analyst', label: 'AI Analyst', icon: BrainCircuit },
+    { id: 'team', label: 'Team Access', icon: User },
     { id: 'reports', label: 'Reports', icon: ReportIcon },
   ];
 

@@ -130,36 +130,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights
           <p className="text-slate-500 dark:text-slate-400">Welcome back, {userName}. Every number tells a story.</p>
         </div>
         <div className="flex items-center gap-4">
-          {company?.joinCode && (
-            <div className="hidden md:block text-right border-r border-slate-200 dark:border-slate-800 pr-4 mr-1">
-              <div className="flex items-center justify-end gap-2 group relative">
-                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Team Code</span>
-                <button
-                  onClick={async () => {
-                    if (!window.confirm('Regenerate Team Code? The old code will stop working.')) return;
-                    setIsLoadingMonthly(true); // Reuse loading state for spinner
-                    try {
-                      const newCode = await regenerateJoinCode();
-                      // Ideally perform a full reload or local update, for now alert + reload is safest
-                      alert(`New Code Generated: ${newCode}`);
-                      window.location.reload();
-                    } catch (e: any) {
-                      alert('Failed to regenerate code: ' + e.message);
-                    } finally {
-                      setIsLoadingMonthly(false);
-                    }
-                  }}
-                  className="text-slate-400 hover:text-indigo-600 transition-colors p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md"
-                  title="Regenerate Code"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                </button>
-              </div>
-              <div className="font-mono font-bold text-lg text-indigo-600 dark:text-indigo-400 tracking-widest">
-                {company?.joinCode || <span className="text-slate-300 text-sm italic">No Code</span>}
-              </div>
-            </div>
-          )}
+
           <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 px-4 py-2 rounded-2xl flex items-center gap-3">
             <Award className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             <div>

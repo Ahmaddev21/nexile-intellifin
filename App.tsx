@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
+import TeamSettings from './components/TeamSettings';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Workspace from './components/Workspace';
@@ -515,6 +515,8 @@ const App: React.FC = () => {
         return <AIChat data={financialData} />;
       case 'projects':
         return <Projects data={financialData} currencySymbol={currencySymbol} onDataRefresh={refreshData} />;
+      case 'team':
+        return <TeamSettings company={company} onUpdate={refreshData} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center py-20 glass-panel rounded-[3rem] border border-slate-100 dark:border-slate-800">
