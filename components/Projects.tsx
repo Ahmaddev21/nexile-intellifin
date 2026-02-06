@@ -14,9 +14,10 @@ interface ProjectsProps {
     data: FinancialData;
     currencySymbol: string;
     onDataRefresh: () => void;
+    userRole: 'admin' | 'member';
 }
 
-const Projects: React.FC<ProjectsProps> = ({ data, currencySymbol, onDataRefresh }) => {
+const Projects: React.FC<ProjectsProps> = ({ data, currencySymbol, onDataRefresh, userRole }) => {
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
     const [projectDetail, setProjectDetail] = useState<ProjectFinancialDetail | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -231,55 +232,57 @@ const Projects: React.FC<ProjectsProps> = ({ data, currencySymbol, onDataRefresh
                                     <div className={`flex items-center gap-1 ${project.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                         {project.profit >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
                                     </div>
-                                    <div className="relative">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setActiveMenu(activeMenu === project.id ? null : project.id);
-                                            }}
-                                            className="p-1 px-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
-                                        >
-                                            <MoreVertical className="w-5 h-5" />
-                                        </button>
+                                    {userRole === 'admin' && (
+                                        <div className="relative">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActiveMenu(activeMenu === project.id ? null : project.id);
+                                                }}
+                                                className="p-1 px-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
+                                            >
+                                                <MoreVertical className="w-5 h-5" />
+                                            </button>
 
-                                        {activeMenu === project.id && (
-                                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                                                <div className="p-2 space-y-1">
-                                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2">Set Status</div>
-                                                    {[
-                                                        { id: 'active', label: 'Active', icon: Clock, color: 'text-emerald-500' },
-                                                        { id: 'on-hold', label: 'On Hold', icon: Ban, color: 'text-amber-500' },
-                                                        { id: 'completed', label: 'Completed', icon: CheckCircle2, color: 'text-indigo-500' },
-                                                        { id: 'archived', label: 'Archive', icon: Archive, color: 'text-slate-400' }
-                                                    ].map((s) => (
+                                            {activeMenu === project.id && (
+                                                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                                    <div className="p-2 space-y-1">
+                                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2">Set Status</div>
+                                                        {[
+                                                            { id: 'active', label: 'Active', icon: Clock, color: 'text-emerald-500' },
+                                                            { id: 'on-hold', label: 'On Hold', icon: Ban, color: 'text-amber-500' },
+                                                            { id: 'completed', label: 'Completed', icon: CheckCircle2, color: 'text-indigo-500' },
+                                                            { id: 'archived', label: 'Archive', icon: Archive, color: 'text-slate-400' }
+                                                        ].map((s) => (
+                                                            <button
+                                                                key={s.id}
+                                                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(project.id, s.id); }}
+                                                                className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-bold rounded-xl transition-all ${project.status === s.id ? 'bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}
+                                                            >
+                                                                <s.icon className={`w-4 h-4 ${s.color}`} />
+                                                                {s.label}
+                                                            </button>
+                                                        ))}
+                                                        <div className="h-[1px] bg-slate-100 dark:bg-slate-800 my-1 mx-2"></div>
                                                         <button
-                                                            key={s.id}
-                                                            onClick={(e) => { e.stopPropagation(); handleUpdateStatus(project.id, s.id); }}
-                                                            className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-bold rounded-xl transition-all ${project.status === s.id ? 'bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}
+                                                            onClick={(e) => { e.stopPropagation(); handleEditProject(project); }}
+                                                            className="w-full flex items-center gap-3 px-3 py-2 text-sm font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all"
                                                         >
-                                                            <s.icon className={`w-4 h-4 ${s.color}`} />
-                                                            {s.label}
+                                                            <Edit3 className="w-4 h-4 text-indigo-500" />
+                                                            Edit Project
                                                         </button>
-                                                    ))}
-                                                    <div className="h-[1px] bg-slate-100 dark:bg-slate-800 my-1 mx-2"></div>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleEditProject(project); }}
-                                                        className="w-full flex items-center gap-3 px-3 py-2 text-sm font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white rounded-xl transition-all"
-                                                    >
-                                                        <Edit3 className="w-4 h-4 text-indigo-500" />
-                                                        Edit Project
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.id); }}
-                                                        className="w-full flex items-center gap-3 px-3 py-2 text-sm font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                        Delete Project
-                                                    </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.id); }}
+                                                            className="w-full flex items-center gap-3 px-3 py-2 text-sm font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                            Delete Project
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

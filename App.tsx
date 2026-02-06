@@ -548,7 +548,7 @@ const App: React.FC = () => {
       case 'ai-analyst':
         return <AIChat data={financialData} />;
       case 'projects':
-        return <Projects data={financialData} currencySymbol={currencySymbol} onDataRefresh={refreshData} />;
+        return <Projects data={financialData} currencySymbol={currencySymbol} onDataRefresh={refreshData} userRole={userRole} />;
       case 'team':
         return <TeamSettings company={company} onUpdate={refreshData} userRole={userRole} />;
       default:

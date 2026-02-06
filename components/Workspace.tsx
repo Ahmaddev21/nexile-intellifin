@@ -187,19 +187,17 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
               className="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50 w-full sm:w-64 text-slate-900 dark:text-white"
             />
           </div>
-          {userRole === 'admin' && (
-            <button
-              onClick={() => {
-                if (activeTab === 'invoices') onAddInvoice();
-                else if (activeTab === 'expenses') onAddExpense();
-                else if (activeTab === 'payables') onAddPayable();
-                else onAddCreditNote();
-              }}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-2xl font-bold text-sm transition-colors whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4" /> Add {activeTab === 'invoices' ? 'Invoice' : activeTab === 'expenses' ? 'Expense' : activeTab === 'payables' ? 'Bill' : 'Credit Note'}
-            </button>
-          )}
+          <button
+            onClick={() => {
+              if (activeTab === 'invoices') onAddInvoice();
+              else if (activeTab === 'expenses') onAddExpense();
+              else if (activeTab === 'payables') onAddPayable();
+              else onAddCreditNote();
+            }}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-2xl font-bold text-sm transition-colors whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" /> Add {activeTab === 'invoices' ? 'Invoice' : activeTab === 'expenses' ? 'Expense' : activeTab === 'payables' ? 'Bill' : 'Credit Note'}
+          </button>
         </div>
       </div>
 
