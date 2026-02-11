@@ -27,7 +27,13 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
   // Action Menu State
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [optimisticUpdates, setOptimisticUpdates] = useState<Record<string, string>>({});
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Clear optimistic updates when real data arrives
+  useEffect(() => {
+    setOptimisticUpdates({});
+  }, [data]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -74,15 +80,20 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
   };
 
   const handleStatusUpdate = async (invoiceId: string, status: FinancialStatus) => {
-    setIsProcessing(invoiceId);
+    // Optimistic Update
+    setOptimisticUpdates(prev => ({ ...prev, [invoiceId]: status }));
+    setActiveMenuId(null);
+
     try {
       await updateInvoice(invoiceId, { status });
       onDataRefresh();
-      setActiveMenuId(null);
     } catch (error: any) {
+      setOptimisticUpdates(prev => {
+        const next = { ...prev };
+        delete next[invoiceId];
+        return next;
+      });
       alert(`Update failed: ${error.message}`);
-    } finally {
-      setIsProcessing(null);
     }
   };
 
@@ -110,40 +121,64 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
   };
 
   const handlePayableAction = async (id: string, action: 'delete' | 'status', payload?: any) => {
-    setIsProcessing(id);
-    try {
-      if (action === 'delete') {
-        if (!window.confirm('Delete this payable invoice?')) return;
+    if (action === 'delete') {
+      if (!window.confirm('Delete this payable invoice?')) return;
+      setIsProcessing(id);
+      try {
         await deletePayableInvoice(id);
-      } else {
-        await updatePayableInvoice(id, { status: payload });
+        onDataRefresh();
+        setActiveMenuId(null);
+      } catch (error: any) {
+        alert(`Action failed: ${error.message}`);
+      } finally {
+        setIsProcessing(null);
       }
-      onDataRefresh();
+    } else {
+      setOptimisticUpdates(prev => ({ ...prev, [id]: payload }));
       setActiveMenuId(null);
-    } catch (error: any) {
-      alert(`Action failed: ${error.message}`);
-    } finally {
-      setIsProcessing(null);
+      try {
+        await updatePayableInvoice(id, { status: payload });
+        onDataRefresh();
+      } catch (error: any) {
+        setOptimisticUpdates(prev => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        alert(`Action failed: ${error.message}`);
+      }
     }
   };
 
   const handleCreditNoteAction = async (id: string, action: 'delete' | 'status', payload?: any) => {
-    setIsProcessing(id);
-    try {
-      if (action === 'delete') {
-        if (!window.confirm('Delete this credit note?')) return;
+    if (action === 'delete') {
+      if (!window.confirm('Delete this credit note?')) return;
+      setIsProcessing(id);
+      try {
         const { deleteCreditNote } = await import('../services/api');
         await deleteCreditNote(id);
-      } else {
+        onDataRefresh();
+        setActiveMenuId(null);
+      } catch (error: any) {
+        alert(`Action failed: ${error.message}`);
+      } finally {
+        setIsProcessing(null);
+      }
+    } else {
+      setOptimisticUpdates(prev => ({ ...prev, [id]: payload }));
+      setActiveMenuId(null);
+      try {
         const { updateCreditNote } = await import('../services/api');
         await updateCreditNote(id, { status: payload });
+        onDataRefresh();
+      } catch (error: any) {
+        setOptimisticUpdates(prev => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        alert(`Action failed: ${error.message}`);
       }
-      onDataRefresh();
-      setActiveMenuId(null);
-    } catch (error: any) {
-      alert(`Action failed: ${error.message}`);
-    } finally {
-      setIsProcessing(null);
     }
   };
 
@@ -245,7 +280,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
                         <Loader2 className="w-4 h-4 animate-spin" /> Syncing...
                       </div>
                     ) : (
-                      <StatusBadge status={inv.status} />
+                      <StatusBadge status={(optimisticUpdates[inv.id] || inv.status) as FinancialStatus} />
                     )}
                   </td>
                   <td className="px-6 py-4 text-right relative">
@@ -263,11 +298,11 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
                       >
                         <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Change Status</div>
                         <div className="grid grid-cols-1 gap-1">
-                          <ActionItem icon={<Clock className="w-4 h-4" />} label="Set to Draft" onClick={() => handleStatusUpdate(inv.id, 'draft')} active={inv.status === 'draft'} />
-                          <ActionItem icon={<Send className="w-4 h-4" />} label="Mark as Sent" onClick={() => handleStatusUpdate(inv.id, 'sent')} active={inv.status === 'sent'} />
-                          <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Mark as Paid" onClick={() => handleStatusUpdate(inv.id, 'paid')} active={inv.status === 'paid'} />
-                          <ActionItem icon={<AlertCircle className="w-4 h-4 text-rose-500" />} label="Mark Overdue" onClick={() => handleStatusUpdate(inv.id, 'overdue')} active={inv.status === 'overdue'} />
-                          <ActionItem icon={<Ban className="w-4 h-4" />} label="Cancel Invoice" onClick={() => handleStatusUpdate(inv.id, 'cancelled')} active={inv.status === 'cancelled'} />
+                          <ActionItem icon={<Clock className="w-4 h-4" />} label="Set to Draft" onClick={() => handleStatusUpdate(inv.id, 'draft')} active={(optimisticUpdates[inv.id] || inv.status) === 'draft'} />
+                          <ActionItem icon={<Send className="w-4 h-4" />} label="Mark as Sent" onClick={() => handleStatusUpdate(inv.id, 'sent')} active={(optimisticUpdates[inv.id] || inv.status) === 'sent'} />
+                          <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Mark as Paid" onClick={() => handleStatusUpdate(inv.id, 'paid')} active={(optimisticUpdates[inv.id] || inv.status) === 'paid'} />
+                          <ActionItem icon={<AlertCircle className="w-4 h-4 text-rose-500" />} label="Mark Overdue" onClick={() => handleStatusUpdate(inv.id, 'overdue')} active={(optimisticUpdates[inv.id] || inv.status) === 'overdue'} />
+                          <ActionItem icon={<Ban className="w-4 h-4" />} label="Cancel Invoice" onClick={() => handleStatusUpdate(inv.id, 'cancelled')} active={(optimisticUpdates[inv.id] || inv.status) === 'cancelled'} />
                         </div>
                         {userRole === 'admin' && (
                           <>
@@ -373,7 +408,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
                         <Loader2 className="w-4 h-4 animate-spin" /> Syncing...
                       </div>
                     ) : (
-                      <StatusBadge status={pay.status} />
+                      <StatusBadge status={(optimisticUpdates[pay.id] || pay.status) as FinancialStatus} />
                     )}
                   </td>
                   <td className="px-6 py-4 text-right relative">
@@ -390,8 +425,8 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
                       >
                         <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Actions</div>
                         <div className="grid grid-cols-1 gap-1">
-                          <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Mark Paid" onClick={() => handlePayableAction(pay.id, 'status', 'paid')} active={pay.status === 'paid'} />
-                          <ActionItem icon={<AlertCircle className="w-4 h-4 text-rose-500" />} label="Mark Overdue" onClick={() => handlePayableAction(pay.id, 'status', 'overdue')} active={pay.status === 'overdue'} />
+                          <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Mark Paid" onClick={() => handlePayableAction(pay.id, 'status', 'paid')} active={(optimisticUpdates[pay.id] || pay.status) === 'paid'} />
+                          <ActionItem icon={<AlertCircle className="w-4 h-4 text-rose-500" />} label="Mark Overdue" onClick={() => handlePayableAction(pay.id, 'status', 'overdue')} active={(optimisticUpdates[pay.id] || pay.status) === 'overdue'} />
                           {userRole === 'admin' && (
                             <>
                               <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
@@ -427,8 +462,8 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
                         <Loader2 className="w-4 h-4 animate-spin" /> Syncing...
                       </div>
                     ) : (
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold ring-1 ${cn.status === 'applied' ? 'bg-emerald-50 text-emerald-600 ring-emerald-500/20' : 'bg-slate-100 text-slate-500 ring-slate-400/20'}`}>
-                        {cn.status.toUpperCase()}
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold ring-1 ${(optimisticUpdates[cn.id] || cn.status) === 'applied' ? 'bg-emerald-50 text-emerald-600 ring-emerald-500/20' : 'bg-slate-100 text-slate-500 ring-slate-400/20'}`}>
+                        {(optimisticUpdates[cn.id] || cn.status).toUpperCase()}
                       </span>
                     )}
                   </td>
@@ -446,8 +481,8 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
                       >
                         <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Actions</div>
                         <div className="grid grid-cols-1 gap-1">
-                          <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Set Applied" onClick={() => handleCreditNoteAction(cn.id, 'status', 'applied')} active={cn.status === 'applied'} />
-                          <ActionItem icon={<Ban className="w-4 h-4" />} label="Void Credit" onClick={() => handleCreditNoteAction(cn.id, 'status', 'void')} active={cn.status === 'void'} />
+                          <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Set Applied" onClick={() => handleCreditNoteAction(cn.id, 'status', 'applied')} active={(optimisticUpdates[cn.id] || cn.status) === 'applied'} />
+                          <ActionItem icon={<Ban className="w-4 h-4" />} label="Void Credit" onClick={() => handleCreditNoteAction(cn.id, 'status', 'void')} active={(optimisticUpdates[cn.id] || cn.status) === 'void'} />
                           {userRole === 'admin' && (
                             <>
                               <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
