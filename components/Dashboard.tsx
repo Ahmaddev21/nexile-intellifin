@@ -142,7 +142,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white font-heading">Nexile Insight</h2>
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-white font-heading">Intellifin</h2>
           <p className="text-slate-500 dark:text-slate-400">Welcome back, {userName}. Every number tells a story.</p>
         </div>
         <div className="flex items-center gap-4">

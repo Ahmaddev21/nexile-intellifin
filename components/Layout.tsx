@@ -3,7 +3,9 @@ import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Table2,
-  BrainCircuit,
+  LayoutDashboard,
+  Table2,
+  Activity, // New Logo Icon
   Briefcase,
   PieChart as ReportIcon,
   Settings,
@@ -126,11 +128,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, the
           <div className="p-8 flex items-center justify-between">
             <div className="flex items-center gap-3 overflow-hidden">
               <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0">
-                <BrainCircuit className="w-6 h-6 text-white" />
+                <Activity className="w-6 h-6 text-white" />
               </div>
               {isSidebarOpen && (
                 <h1 className="font-heading font-bold text-xl text-slate-900 dark:text-white tracking-tight animate-in fade-in slide-in-from-left-4 duration-500">
-                  Nexile
+                  Intellifin
                 </h1>
               )}
             </div>
@@ -187,9 +189,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, the
           <div className="flex items-center gap-6">
             <div className={`transition-all duration-300 ${isSidebarOpen ? 'md:hidden opacity-0 w-0' : 'md:flex opacity-100 w-auto'} flex items-center gap-3`}>
               <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                <BrainCircuit className="w-6 h-6 text-white" />
+                <Activity className="w-6 h-6 text-white" />
               </div>
-              <h1 className="font-heading font-bold text-xl text-slate-900 dark:text-white tracking-tight hidden sm:block">Nexile</h1>
+              <h1 className="font-heading font-bold text-xl text-slate-900 dark:text-white tracking-tight hidden sm:block">Intellifin</h1>
             </div>
             {!isSidebarOpen && <div className="hidden md:block h-8 w-[1px] bg-slate-100 dark:bg-slate-800 mx-2"></div>}
             <DigitalClock />
