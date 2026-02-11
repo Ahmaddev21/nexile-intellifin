@@ -125,70 +125,69 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, the
       <aside className={`fixed inset-y-0 left-0 z-50 transition-all duration-300 transform ${isSidebarOpen ? 'w-72' : 'w-20'} bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 hidden md:block shadow-2xl shadow-slate-200 dark:shadow-none`}>
         <div className="flex flex-col h-full">
           <div className="p-8 flex items-center justify-between">
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0">
-                <Activity className="w-6 h-6 text-white" />
-              </div>
-              {isSidebarOpen && (
-                <h1 className="font-heading font-bold text-xl text-slate-900 dark:text-white tracking-tight animate-in fade-in slide-in-from-left-4 duration-500">
-                  Intellifin
-                </h1>
-              )}
+            <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0 overflow-hidden">
+              <img src="/logo.png" alt="Intellifin Logo" className="w-full h-full object-cover" />
             </div>
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
+            {isSidebarOpen && (
+              <h1 className="font-heading font-bold text-xl text-slate-900 dark:text-white tracking-tight animate-in fade-in slide-in-from-left-4 duration-500">
+                Intellifin
+              </h1>
+            )}
           </div>
-
-          <nav className="flex-1 px-4 space-y-1">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => onViewChange(item.id)}
-                className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl font-bold text-sm transition-all group ${activeView === item.id
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-                  : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-              >
-                <item.icon className={`w-5 h-5 ${activeView === item.id ? 'text-white' : 'text-slate-400 group-hover:text-indigo-600'}`} />
-                <span className={`${!isSidebarOpen && 'hidden'}`}>{item.label}</span>
-              </button>
-            ))}
-          </nav>
-
-          <div className="p-4 mt-auto">
-            <div className={`bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-4 mb-4 ${!isSidebarOpen && 'hidden'}`}>
-              <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">User</div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-bold text-slate-900 dark:text-white truncate">{firstName}</span>
-                <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full font-bold">Pro</span>
-              </div>
-              <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-500 w-3/4"></div>
-              </div>
-            </div>
-
-            <button
-              onClick={onLogout}
-              className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl font-bold text-sm text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 transition-all"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className={`${!isSidebarOpen && 'hidden'}`}>Logout</span>
-            </button>
-          </div>
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
         </div>
-      </aside>
 
-      {/* Main Content */}
-      <main className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'md:ml-72' : 'md:ml-20'}`}>
+        <nav className="flex-1 px-4 space-y-1">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => onViewChange(item.id)}
+              className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl font-bold text-sm transition-all group ${activeView === item.id
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                }`}
+            >
+              <item.icon className={`w-5 h-5 ${activeView === item.id ? 'text-white' : 'text-slate-400 group-hover:text-indigo-600'}`} />
+              <span className={`${!isSidebarOpen && 'hidden'}`}>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="p-4 mt-auto">
+          <div className={`bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-4 mb-4 ${!isSidebarOpen && 'hidden'}`}>
+            <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">User</div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold text-slate-900 dark:text-white truncate">{firstName}</span>
+              <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full font-bold">Pro</span>
+            </div>
+            <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-full bg-indigo-500 w-3/4"></div>
+            </div>
+          </div>
+
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl font-bold text-sm text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 transition-all"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className={`${!isSidebarOpen && 'hidden'}`}>Logout</span>
+          </button>
+        </div>
+    </div>
+      </aside >
+
+  {/* Main Content */ }
+  < main className = {`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'md:ml-72' : 'md:ml-20'}`}>
         <header className="h-20 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md sticky top-0 z-40 border-b border-slate-100 dark:border-slate-800 px-8 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className={`transition-all duration-300 ${isSidebarOpen ? 'md:hidden opacity-0 w-0' : 'md:flex opacity-100 w-auto'} flex items-center gap-3`}>
-              <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                <Activity className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 overflow-hidden">
+                <img src="/logo.png" alt="Intellifin Logo" className="w-full h-full object-cover" />
               </div>
               <h1 className="font-heading font-bold text-xl text-slate-900 dark:text-white tracking-tight hidden sm:block">Intellifin</h1>
             </div>
@@ -251,8 +250,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, the
         <div className="p-8 max-w-7xl mx-auto w-full">
           {children}
         </div>
-      </main>
-    </div>
+      </main >
+    </div >
   );
 };
 
