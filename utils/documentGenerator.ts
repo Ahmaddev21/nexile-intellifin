@@ -57,34 +57,45 @@ export const generatePDF = (record: any, type: RecordType, company: Company) => 
         doc.setFont("helvetica", "bold");
         doc.text(`${label}:`, x, currentY);
         doc.setFont("helvetica", "normal");
-        doc.text(`${value}`, x + 35, currentY);
+        doc.text(`${value}`, x + 40, currentY);
     };
 
     if (type === 'invoice') {
+        // Row 1
         addDetailRow('Invoice ID', record.customId || record.id.substring(0, 8));
-        addDetailRow('Client', record.clientName);
-        currentY += 6;
+        addDetailRow('Client', record.clientName, rightColX);
+        currentY += 8; // Increased spacing
+
+        // Row 2
         addDetailRow('Date', record.date);
-        addDetailRow('Project', record.projectName);
+        addDetailRow('Project', record.projectName, rightColX);
     } else if (type === 'expense') {
-        addDetailRow('Expense ID', record.id);
-        addDetailRow('Category', record.category);
-        currentY += 6;
+        // Row 1
+        addDetailRow('Expense ID', record.id.substring(0, 8));
+        addDetailRow('Category', record.category, rightColX);
+        currentY += 8;
+
+        // Row 2
         addDetailRow('Date', record.date);
-        addDetailRow('Project', record.projectName);
+        addDetailRow('Project', record.projectName, rightColX);
     } else if (type === 'payable') {
-        addDetailRow('Bill ID', record.id);
-        addDetailRow('Vendor', record.vendorName);
-        currentY += 6;
+        // Row 1
+        addDetailRow('Bill ID', record.id.substring(0, 8));
+        addDetailRow('Vendor', record.vendorName, rightColX);
+        currentY += 8;
+
+        // Row 2
         addDetailRow('Date', record.date);
         addDetailRow('Due Date', record.dueDate, rightColX);
-        // Reset Y for next block if we used right col
     } else if (type === 'credit_note') {
-        addDetailRow('Credit Note ID', record.id);
-        addDetailRow('Invoice Ref', record.invoiceId?.substring(0, 8) || 'N/A');
-        currentY += 6;
+        // Row 1
+        addDetailRow('Credit Note ID', record.id.substring(0, 8));
+        addDetailRow('Invoice Ref', record.invoiceId?.substring(0, 8) || 'N/A', rightColX);
+        currentY += 8;
+
+        // Row 2
         addDetailRow('Date', new Date(record.createdAt).toLocaleDateString());
-        addDetailRow('Reason', record.reason || 'N/A');
+        addDetailRow('Reason', record.reason || 'N/A', rightColX);
     }
 
     currentY += 15;
