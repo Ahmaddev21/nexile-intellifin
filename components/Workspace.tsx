@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, Filter, Download, MoreVertical, CheckCircle2, AlertCircle, Clock, Tag, Trash2, Edit3, Send, Ban, CheckSquare, Loader2 } from 'lucide-react';
-import { FinancialData, FinancialStatus } from '../types';
+import { Search, Plus, Filter, Download, MoreVertical, CheckCircle2, AlertCircle, Clock, Tag, Trash2, Edit3, Send, Ban, CheckSquare, Loader2, FileText, Printer } from 'lucide-react';
+import { FinancialData, FinancialStatus, Company } from '../types';
 import { updateInvoice, deleteInvoice, updateExpense, deleteExpense, updatePayableInvoice, deletePayableInvoice } from '../services/api';
+import DocumentViewerModal from './DocumentViewerModal';
+import { generatePDF, generateExcel } from '../utils/documentGenerator';
 
 interface WorkspaceProps {
   data: FinancialData;
+  company: Company;
   currencySymbol: string;
   userRole: 'admin' | 'member';
   onCategorize?: (expenseId: string, event: React.MouseEvent) => void;
@@ -19,7 +22,7 @@ interface WorkspaceProps {
   onDataRefresh: () => void;
 }
 
-const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, onCategorize, onAddInvoice, onAddExpense, onAddPayable, onAddCreditNote, onEditInvoice, onEditExpense, onEditPayable, onEditCreditNote, onDataRefresh }) => {
+const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, userRole, onCategorize, onAddInvoice, onAddExpense, onAddPayable, onAddCreditNote, onEditInvoice, onEditExpense, onEditPayable, onEditCreditNote, onDataRefresh }) => {
   const [activeTab, setActiveTab] = useState<'invoices' | 'expenses' | 'payables' | 'credit_notes'>('invoices');
   const [searchTerm, setSearchTerm] = useState('');
   const [categorizedIds, setCategorizedIds] = useState<Set<string>>(new Set());
@@ -28,6 +31,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [optimisticUpdates, setOptimisticUpdates] = useState<Record<string, string>>({});
+  const [viewingDocument, setViewingDocument] = useState<{ record: any, type: 'invoice' | 'expense' | 'payable' | 'credit_note' } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Clear optimistic updates when real data arrives
@@ -304,6 +308,11 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
                           <ActionItem icon={<AlertCircle className="w-4 h-4 text-rose-500" />} label="Mark Overdue" onClick={() => handleStatusUpdate(inv.id, 'overdue')} active={(optimisticUpdates[inv.id] || inv.status) === 'overdue'} />
                           <ActionItem icon={<Ban className="w-4 h-4" />} label="Cancel Invoice" onClick={() => handleStatusUpdate(inv.id, 'cancelled')} active={(optimisticUpdates[inv.id] || inv.status) === 'cancelled'} />
                         </div>
+                        <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
+                        <div className="grid grid-cols-1 gap-1">
+                          <ActionItem icon={<FileText className="w-4 h-4" />} label="View as Document" onClick={() => { setViewingDocument({ record: inv, type: 'invoice' }); setActiveMenuId(null); }} />
+                          <ActionItem icon={<Download className="w-4 h-4" />} label="Download PDF" onClick={() => { generatePDF(inv, 'invoice', company); setActiveMenuId(null); }} />
+                        </div>
                         {userRole === 'admin' && (
                           <>
                             <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
@@ -347,15 +356,22 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
                         className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
                       >
                         <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Actions</div>
+                        <div className="grid grid-cols-1 gap-1">
+                          <ActionItem icon={<FileText className="w-4 h-4" />} label="View Voucher" onClick={() => { setViewingDocument({ record: exp, type: 'expense' }); setActiveMenuId(null); }} />
+                          <ActionItem icon={<Download className="w-4 h-4" />} label="Download PDF" onClick={() => { generatePDF(exp, 'expense', company); setActiveMenuId(null); }} />
+                        </div>
                         {userRole === 'admin' && (
-                          <div className="grid grid-cols-1 gap-1">
-                            <ActionItem icon={<Edit3 className="w-4 h-4" />} label="Edit Details" onClick={() => { onEditExpense?.(exp); setActiveMenuId(null); }} />
-                            <ActionItem icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete Expense" onClick={() => {
-                              if (window.confirm('Delete this expense?')) {
-                                deleteExpense(exp.id).then(onDataRefresh);
-                              }
-                            }} variant="danger" />
-                          </div>
+                          <>
+                            <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
+                            <div className="grid grid-cols-1 gap-1">
+                              <ActionItem icon={<Edit3 className="w-4 h-4" />} label="Edit Details" onClick={() => { onEditExpense?.(exp); setActiveMenuId(null); }} />
+                              <ActionItem icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete Expense" onClick={() => {
+                                if (window.confirm('Delete this expense?')) {
+                                  deleteExpense(exp.id).then(onDataRefresh);
+                                }
+                              }} variant="danger" />
+                            </div>
+                          </>
                         )}
                         {/* Note: Expenses don't seem to have a Status update action in the original code, only Edit/Delete. 
                             If Members can't Edit/Delete, they can't do anything here. 
@@ -427,6 +443,9 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
                         <div className="grid grid-cols-1 gap-1">
                           <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Mark Paid" onClick={() => handlePayableAction(pay.id, 'status', 'paid')} active={(optimisticUpdates[pay.id] || pay.status) === 'paid'} />
                           <ActionItem icon={<AlertCircle className="w-4 h-4 text-rose-500" />} label="Mark Overdue" onClick={() => handlePayableAction(pay.id, 'status', 'overdue')} active={(optimisticUpdates[pay.id] || pay.status) === 'overdue'} />
+                          <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
+                          <ActionItem icon={<FileText className="w-4 h-4" />} label="View Bill" onClick={() => { setViewingDocument({ record: pay, type: 'payable' }); setActiveMenuId(null); }} />
+                          <ActionItem icon={<Download className="w-4 h-4" />} label="Download PDF" onClick={() => { generatePDF(pay, 'payable', company); setActiveMenuId(null); }} />
                           {userRole === 'admin' && (
                             <>
                               <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
@@ -483,6 +502,9 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
                         <div className="grid grid-cols-1 gap-1">
                           <ActionItem icon={<CheckSquare className="w-4 h-4 text-emerald-500" />} label="Set Applied" onClick={() => handleCreditNoteAction(cn.id, 'status', 'applied')} active={(optimisticUpdates[cn.id] || cn.status) === 'applied'} />
                           <ActionItem icon={<Ban className="w-4 h-4" />} label="Void Credit" onClick={() => handleCreditNoteAction(cn.id, 'status', 'void')} active={(optimisticUpdates[cn.id] || cn.status) === 'void'} />
+                          <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
+                          <ActionItem icon={<FileText className="w-4 h-4" />} label="View Note" onClick={() => { setViewingDocument({ record: cn, type: 'credit_note' }); setActiveMenuId(null); }} />
+                          <ActionItem icon={<Download className="w-4 h-4" />} label="Download PDF" onClick={() => { generatePDF(cn, 'credit_note', company); setActiveMenuId(null); }} />
                           {userRole === 'admin' && (
                             <>
                               <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
@@ -520,6 +542,13 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, currencySymbol, userRole, o
           <button className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 rounded-xl text-sm font-bold text-white shadow-md shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-colors">Next</button>
         </div>
       </div>
+      <DocumentViewerModal
+        isOpen={!!viewingDocument}
+        onClose={() => setViewingDocument(null)}
+        record={viewingDocument?.record || null}
+        type={viewingDocument?.type || 'invoice'}
+        company={company}
+      />
     </div >
   );
 };

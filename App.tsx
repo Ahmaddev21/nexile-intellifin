@@ -539,6 +539,7 @@ const App: React.FC = () => {
         return (
           <Workspace
             data={financialData}
+            company={company}
             userRole={userRole}
             currencySymbol={currencySymbol}
             onCategorize={handleCategorizeExpense}
