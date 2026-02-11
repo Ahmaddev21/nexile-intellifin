@@ -41,7 +41,7 @@ begin
   join public.company_users cu on p.id = cu.user_id
   where cu.company_id = v_company_id
   order by points desc
-  limit 10;
+  limit 50;
 end;
 $$ language plpgsql security definer;
 
