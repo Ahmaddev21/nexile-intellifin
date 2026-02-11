@@ -3,9 +3,8 @@ import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Table2,
-  LayoutDashboard,
-  Table2,
   Activity, // New Logo Icon
+  BrainCircuit, // Restored for Nav Menu
   Briefcase,
   PieChart as ReportIcon,
   Settings,
