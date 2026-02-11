@@ -1,20 +1,30 @@
-
 import React from 'react';
-import { Trophy, Shield, Zap, Star, Award, TrendingUp, Users } from 'lucide-react';
-import { UserProgress, Badge } from '../types';
+import { Trophy, Shield, Zap, Star, Award, Users } from 'lucide-react';
+import { UserProgress } from '../types';
+
+interface LeaderboardEntry {
+  userId: string;
+  username: string;
+  points: number;
+  rank: number;
+}
 
 interface GamificationWidgetProps {
   progress: UserProgress;
   userName?: string;
+  leaderboard?: LeaderboardEntry[];
+  currentUserId?: string;
 }
 
 const iconMap: Record<string, any> = {
   Trophy, Shield, Zap, Star
 };
 
-const GamificationWidget: React.FC<GamificationWidgetProps> = ({ progress, userName }) => {
+const GamificationWidget: React.FC<GamificationWidgetProps> = ({ progress, userName, leaderboard = [], currentUserId }) => {
   const levelProgress = (progress.points / progress.nextLevelPoints) * 100;
-  const firstName = userName?.split(' ')[0] || 'You';
+
+  // Find current user's rank in the real leaderboard
+  const userRank = leaderboard.find(u => u.userId === currentUserId)?.rank || '-';
 
   return (
     <div className="space-y-6">
@@ -30,18 +40,20 @@ const GamificationWidget: React.FC<GamificationWidgetProps> = ({ progress, userN
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 font-heading">#{Math.floor(Math.random() * 10) + 1}</div>
+            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 font-heading">#{userRank}</div>
             <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Team Rank</div>
           </div>
         </div>
-        
+
         <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-2">
-          <div 
+          <div
             className="h-full bg-indigo-600 transition-all duration-1000 ease-out"
-            style={{ width: `${levelProgress}%` }}
+            style={{ width: `${Math.min(levelProgress, 100)}%` }}
           ></div>
         </div>
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium italic">750 XP until Level {progress.level + 1}</p>
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium italic">
+          {Math.max(0, progress.nextLevelPoints - progress.points)} XP until Level {progress.level + 1}
+        </p>
       </div>
 
       <div className="glass-panel p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
@@ -49,23 +61,26 @@ const GamificationWidget: React.FC<GamificationWidgetProps> = ({ progress, userN
           <Trophy className="w-5 h-5 text-amber-500" /> Recent Achievements
         </h3>
         <div className="grid grid-cols-2 gap-3">
-          {progress.badges.map((badge) => {
-            const IconComponent = iconMap[badge.icon] || Trophy;
-            return (
-              <div 
-                key={badge.id} 
-                className={`p-3 rounded-2xl border transition-all ${
-                  badge.unlocked 
-                    ? 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm opacity-100' 
-                    : 'bg-slate-50 dark:bg-slate-800/50 border-dashed border-slate-200 dark:border-slate-700 opacity-40 grayscale'
-                }`}
-              >
-                <IconComponent className={`w-6 h-6 mb-2 ${badge.color}`} />
-                <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight">{badge.name}</div>
-                <div className="text-[9px] text-slate-500 dark:text-slate-400 mt-1">{badge.description}</div>
-              </div>
-            );
-          })}
+          {progress.badges.length > 0 ? (
+            progress.badges.map((badge) => {
+              const IconComponent = iconMap[badge.icon] || Trophy;
+              return (
+                <div
+                  key={badge.id}
+                  className={`p-3 rounded-2xl border transition-all ${badge.unlocked
+                      ? 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm opacity-100'
+                      : 'bg-slate-50 dark:bg-slate-800/50 border-dashed border-slate-200 dark:border-slate-700 opacity-40 grayscale'
+                    }`}
+                >
+                  <IconComponent className={`w-6 h-6 mb-2 ${badge.color}`} />
+                  <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight">{badge.name}</div>
+                  <div className="text-[9px] text-slate-500 dark:text-slate-400 mt-1">{badge.description}</div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="col-span-2 text-center text-xs text-slate-400 py-4">No achievements yet. Start working!</div>
+          )}
         </div>
       </div>
 
@@ -75,9 +90,19 @@ const GamificationWidget: React.FC<GamificationWidgetProps> = ({ progress, userN
             <Users className="w-5 h-5" /> Team Leaderboard
           </h3>
           <div className="space-y-3 mt-4">
-            <LeaderboardItem name="Alex Rivet" points={3420} rank={1} isUser={false} />
-            <LeaderboardItem name={`${firstName} (You)`} points={progress.points} rank={4} isUser={true} />
-            <LeaderboardItem name="Marcus P." points={1100} rank={8} isUser={false} />
+            {leaderboard.length > 0 ? (
+              leaderboard.map((user) => (
+                <LeaderboardItem
+                  key={user.userId}
+                  name={user.username}
+                  points={user.points}
+                  rank={user.rank}
+                  isUser={user.userId === currentUserId}
+                />
+              ))
+            ) : (
+              <div className="text-indigo-300 text-xs italic">No data available</div>
+            )}
           </div>
         </div>
         <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-indigo-500 rounded-full blur-3xl opacity-20"></div>
@@ -91,9 +116,11 @@ const LeaderboardItem: React.FC<{ name: string; points: number; rank: number; is
     <div className="flex items-center gap-3">
       <span className="text-xs font-bold text-indigo-300 w-4">{rank}</span>
       <div className="w-7 h-7 bg-indigo-700 rounded-lg flex items-center justify-center text-[10px] font-bold">
-        {name.charAt(0)}
+        {name.charAt(0).toUpperCase()}
       </div>
-      <span className={`text-xs font-medium ${isUser ? 'text-white' : 'text-indigo-200'}`}>{name}</span>
+      <span className={`text-xs font-medium ${isUser ? 'text-white font-bold' : 'text-indigo-200'}`}>
+        {name} {isUser && '(You)'}
+      </span>
     </div>
     <span className="text-xs font-bold text-indigo-300">{points} XP</span>
   </div>

@@ -1,4 +1,14 @@
-import { FinancialData, ProjectFinancialDetail, Project, Invoice, Expense, PayableInvoice, CreditNote } from '../types';
+import {
+    FinancialData,
+    ProjectFinancialDetail,
+    Project,
+    Invoice,
+    Expense,
+    PayableInvoice,
+    CreditNote,
+    Company,
+    UserProgress
+} from '../types';
 import { supabase } from '../lib/supabase';
 import { calculateProjectFinancials } from '../utils/financialCalculations';
 
@@ -408,6 +418,47 @@ export const deleteCreditNote = async (id: string) => {
         return { success: true };
     }
     throw new Error('User not authenticated');
+};
+
+// --- Gamification ---
+
+export const getLeaderboard = async (): Promise<{ userId: string; username: string; points: number; rank: number }[]> => {
+    const { data, error } = await supabase.rpc('get_company_leaderboard');
+    if (error) {
+        console.error('Error fetching leaderboard:', error);
+        return [];
+    }
+    return data.map((item: any) => ({
+        userId: item.user_id,
+        username: item.username || 'Unknown',
+        points: item.points,
+        rank: item.rank
+    }));
+};
+
+export const incrementPoints = async (amount: number): Promise<void> => {
+    const { error } = await supabase.rpc('increment_user_points', { p_points: amount });
+    if (error) console.error('Error incrementing points:', error);
+};
+
+export const fetchUserProgress = async (userId: string): Promise<UserProgress | null> => {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('points, level, badges, achievements')
+        .eq('id', userId)
+        .single();
+
+    if (error) {
+        return null;
+    }
+
+    return {
+        points: data.points || 0,
+        level: data.level || 1,
+        nextLevelPoints: (data.level || 1) * 1000,
+        badges: data.badges || [],
+        streaks: 0
+    };
 };
 
 // --- Projects ---

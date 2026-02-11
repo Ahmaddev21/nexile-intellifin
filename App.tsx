@@ -42,6 +42,7 @@ const App: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<any | null>(null);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'member'>('member');
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [company, setCompany] = useState<Company>({
     name: '',
@@ -74,6 +75,7 @@ const App: React.FC = () => {
         // Supabase User object puts custom fields in user_metadata
         const username = userData.user_metadata?.username || userData.email || 'User';
         setUserName(username);
+        setUserId(userData.id);
         localStorage.setItem('userName', username);
 
         // Try to recover role from local storage or default to member until refreshed
@@ -127,6 +129,7 @@ const App: React.FC = () => {
 
     setToken(newToken);
     setUserName(username);
+    setUserId(user.id);
     setUserRole(role);
 
     if (companyData) {
@@ -143,6 +146,7 @@ const App: React.FC = () => {
     localStorage.removeItem('userRole');
     setToken(null);
     setUserName('');
+    setUserId(null);
     setUserRole('member');
     setIsSetupComplete(false);
     setFinancialData({ projects: [], invoices: [], expenses: [], payableInvoices: [], creditNotes: [] });
@@ -299,8 +303,12 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCategorizeExpense = (expenseId: string, event: React.MouseEvent) => {
+  const handleCategorizeExpense = async (expenseId: string, event: React.MouseEvent) => {
     addPoints(75, event);
+
+    // Call API to persist points
+    import('./services/api').then(m => m.incrementPoints(75));
+
     setCategorizedCount(prev => {
       const next = prev + 1;
       if (next === 50) {
@@ -526,7 +534,7 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard data={financialData} insights={aiInsights} isLoadingInsights={isLoadingInsights} progress={userProgress} company={company} userName={userName} />;
+        return <Dashboard data={financialData} insights={aiInsights} isLoadingInsights={isLoadingInsights} progress={userProgress} company={company} userName={userName} currentUserId={userId || undefined} />;
       case 'workspace':
         return (
           <Workspace

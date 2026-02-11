@@ -20,15 +20,31 @@ interface DashboardProps {
   progress: UserProgress;
   company?: Company;
   userName: string;
+  currentUserId?: string; // Add currentUserId prop
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights, progress, company, userName }) => {
+const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights, progress, company, userName, currentUserId }) => {
   const [monthlyData, setMonthlyData] = useState<MonthlyMetrics[]>([]);
   const [selectedMonthIndex, setSelectedMonthIndex] = useState<number>(0);
   const [comparisonPeriod, setComparisonPeriod] = useState<ComparisonPeriod>('MoM');
   const [monthlyInsightText, setMonthlyInsightText] = useState<string>('');
   const [isLoadingMonthly, setIsLoadingMonthly] = useState(false);
   const [showRevenueModal, setShowRevenueModal] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<{ userId: string; username: string; points: number; rank: number }[]>([]);
+
+  // Fetch leaderboard on mount
+  useEffect(() => {
+    const loadLeaderboard = async () => {
+      try {
+        const { getLeaderboard } = await import('../services/api');
+        const data = await getLeaderboard();
+        setLeaderboard(data);
+      } catch (err) {
+        console.error("Failed to load leaderboard", err);
+      }
+    };
+    loadLeaderboard();
+  }, []);
 
   const currencySymbol = useMemo(() => {
     switch (company?.currency) {
@@ -203,7 +219,14 @@ const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-1 space-y-6">
+          <GamificationWidget
+            progress={progress}
+            userName={userName}
+            leaderboard={leaderboard}
+            currentUserId={currentUserId}
+          />
+
           {/* Revenue vs Expenses Chart */}
           <div className="glass-panel p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
             <div className="flex justify-between items-center mb-6">
