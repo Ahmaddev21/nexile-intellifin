@@ -196,8 +196,8 @@ const App: React.FC = () => {
 
   const refreshData = async () => {
     try {
-      // Clear stale state to force fresh calculations
-      setFinancialData({ projects: [], invoices: [], expenses: [], payableInvoices: [], creditNotes: [] });
+      // Clear stale state to force fresh calculations - REMOVED to prevent UI flash
+      // setFinancialData({ projects: [], invoices: [], expenses: [], payableInvoices: [], creditNotes: [] });
 
       // Force fresh Supabase fetch
       const [data, companyData] = await Promise.all([
