@@ -31,17 +31,30 @@ interface LayoutProps {
 }
 
 const DigitalClock: React.FC = () => {
-  const [time, setTime] = useState(new Date());
+  const [date, setDate] = useState(new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
+    const timer = setInterval(() => setDate(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
+  const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const secondsStr = date.toLocaleTimeString([], { second: '2-digit' });
+  const dateStr = date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+
   return (
-    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-mono text-sm bg-slate-100 dark:bg-slate-800/50 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-      <ClockIcon className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
-      <span>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+    <div className="hidden md:flex flex-col items-end justify-center px-4 py-1 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl border border-white/20 dark:border-slate-700/50 shadow-sm transition-all hover:bg-white/80 dark:hover:bg-slate-800/80 group cursor-default">
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-xl font-bold text-slate-900 dark:text-white font-heading tracking-tight leading-none variant-numeric-tabular-nums">
+          {timeStr}
+        </span>
+        <span className="text-xs font-medium text-slate-400 dark:text-slate-500 font-mono w-[20px]">
+          {secondsStr}
+        </span>
+      </div>
+      <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 dark:text-indigo-400 leading-none mt-0.5">
+        {dateStr}
+      </div>
     </div>
   );
 };
