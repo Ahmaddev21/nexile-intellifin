@@ -35,6 +35,7 @@ export interface Invoice {
   amount: number;
   date: string;
   status: FinancialStatus;
+  attachment_url?: string;
 }
 
 export interface Expense {
@@ -46,6 +47,7 @@ export interface Expense {
   date: string;
   type: 'fixed' | 'variable';
   status: 'paid' | 'pending' | 'cancelled';
+  attachment_url?: string;
 }
 
 export interface Project {
@@ -74,6 +76,7 @@ export interface PayableInvoice {
   dueDate: string;
   status: 'draft' | 'received' | 'paid' | 'overdue' | 'cancelled';
   description?: string;
+  attachment_url?: string;
 }
 
 export interface CreditNote {
@@ -85,6 +88,7 @@ export interface CreditNote {
   status: CreditNoteStatus;
   createdAt: string;
   updatedAt: string;
+  attachment_url?: string;
 }
 
 export interface FinancialData {

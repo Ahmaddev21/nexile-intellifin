@@ -3,6 +3,7 @@ import { Search, Plus, Filter, Download, MoreVertical, CheckCircle2, AlertCircle
 import { FinancialData, FinancialStatus, Company } from '../types';
 import { updateInvoice, deleteInvoice, updateExpense, deleteExpense, updatePayableInvoice, deletePayableInvoice } from '../services/api';
 import DocumentViewerModal from './DocumentViewerModal';
+import DocumentAttachmentModal from './DocumentAttachmentModal';
 import { generatePDF, generateExcel } from '../utils/documentGenerator';
 
 interface WorkspaceProps {
@@ -186,6 +187,49 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
     }
   };
 
+  // Document Attachment State
+  const [attachmentModal, setAttachmentModal] = useState<{
+    isOpen: boolean;
+    recordId: string;
+    recordType: 'invoices' | 'expenses' | 'payable_invoices' | 'credit_notes';
+    currentUrl?: string;
+  }>({
+    isOpen: false,
+    recordId: '',
+    recordType: 'invoices'
+  });
+
+  const openAttachmentModal = (record: any, type: 'invoices' | 'expenses' | 'payable_invoices' | 'credit_notes') => {
+    setAttachmentModal({
+      isOpen: true,
+      recordId: record.id,
+      recordType: type,
+      currentUrl: record.attachment_url
+    });
+  };
+
+  const handleAttachmentSuccess = (url: string) => {
+    // Refresh data to show new attachment status
+    // In a real app we might update local state optimistically, but refresh is safer for now
+    onDataRefresh();
+    // Update local modal state if needed
+    setAttachmentModal(prev => ({ ...prev, currentUrl: url || undefined }));
+  };
+
+  // Helper to render attachment button
+  const AttachmentButton = ({ record, type }: { record: any, type: 'invoices' | 'expenses' | 'payable_invoices' | 'credit_notes' }) => (
+    <button
+      onClick={() => openAttachmentModal(record, type)}
+      className={`p-2 transition-all rounded-xl mr-1 ${record.attachment_url
+        ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
+        : 'text-slate-300 dark:text-slate-600 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+        }`}
+      title={record.attachment_url ? "View Attached Document" : "Upload Document"}
+    >
+      {record.attachment_url ? <CheckCircle2 className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+    </button>
+  );
+
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -250,9 +294,9 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
               </th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Amount</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Date</th>
-              {activeTab !== 'expenses' && (
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Status/Action</th>
-              )}
+              <th className="px-6 py-4 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                {activeTab !== 'expenses' ? 'Status' : ''}
+              </th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest"></th>
             </tr>
           </thead>
@@ -287,7 +331,8 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                       <StatusBadge status={(optimisticUpdates[inv.id] || inv.status) as FinancialStatus} />
                     )}
                   </td>
-                  <td className="px-6 py-4 text-right relative">
+                  <td className="px-6 py-4 text-right relative flex justify-end items-center gap-2">
+                    <AttachmentButton record={inv} type="invoices" />
                     <button
                       onClick={() => setActiveMenuId(activeMenuId === inv.id ? null : inv.id)}
                       className={`transition-all p-2 rounded-xl ${activeMenuId === inv.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
@@ -343,7 +388,11 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                     <div className="font-bold text-slate-900 dark:text-white">{currencySymbol}{exp.amount.toLocaleString()}</div>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{exp.date}</td>
-                  <td className="px-6 py-4 text-right relative">
+                  <td className="px-6 py-4">
+                    {/* Expenses usually allow upload but status might be N/A or auto-paid */}
+                  </td>
+                  <td className="px-6 py-4 text-right relative flex justify-end items-center gap-2">
+                    <AttachmentButton record={exp} type="expenses" />
                     <button
                       onClick={() => setActiveMenuId(activeMenuId === exp.id ? null : exp.id)}
                       className={`transition-all p-2 rounded-xl ${activeMenuId === exp.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
@@ -373,22 +422,18 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                             </div>
                           </>
                         )}
-                        {/* Note: Expenses don't seem to have a Status update action in the original code, only Edit/Delete. 
-                            If Members can't Edit/Delete, they can't do anything here. 
-                            The user said "change status of invoice... same goes for expenses". 
-                            But expenses usually just have categories. 
+                        {/* Note: Expenses don't seem to have a Status update action in the original code, only Edit/Delete.
+                            If Members can't Edit/Delete, they can't do anything here.
+                            The user said "change status of invoice... same goes for expenses".
+                            But expenses usually just have categories.
                             If there is no 'status' field for expenses visible in UI, maybe we leave it as Admin only or just hidden.
-                            Original code ONLY showed Edit/Delete. 
-                            So for Expenses, if there's no status to change, maybe members SHOULDN'T see the menu?
-                            Re-reading: "mark as a paid ,draft etc same goes for expemses".
-                            However, the 'Expense' type in 'types.ts' might not have a mutable status in the same way.
-                            Let's look at the original code. It only had Edit/Delete. 
+                            Original code ONLY showed Edit/Delete.
                             If I enable the menu but hide Edit/Delete, it will be empty for Members.
                             I will Wrap the whole button in 'admin' check ONLY if there are no other actions.
-                            BUT user insisted "same goes for expenses". 
+                            BUT user insisted "same goes for expenses".
                             Maybe they WANT to be able to edit Status, but the UI didn't have it?
                             For now, I will enable menu, and if empty, it's empty. But wait, that's bad UI.
-                            Actually, 'expenses' in `types.ts` has `status`? 
+                            Actually, 'expenses' in `types.ts` has `status`?
                             The previous view of `Workspace.tsx` didn't show status actions for expenses.
                             I will stick to the existing actions. If only Edit/Delete exist, and Members cant do them, then Members get no menu for Expenses.
                             Wait, "Status/Action" column is skipped for expenses.
@@ -427,7 +472,8 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                       <StatusBadge status={(optimisticUpdates[pay.id] || pay.status) as FinancialStatus} />
                     )}
                   </td>
-                  <td className="px-6 py-4 text-right relative">
+                  <td className="px-6 py-4 text-right relative flex justify-end items-center gap-2">
+                    <AttachmentButton record={pay} type="payable_invoices" />
                     <button
                       onClick={() => setActiveMenuId(activeMenuId === pay.id ? null : pay.id)}
                       className="text-slate-300 dark:text-slate-600 hover:text-indigo-600 transition-colors p-1"
@@ -486,7 +532,8 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-right relative">
+                  <td className="px-6 py-4 text-right relative flex justify-end items-center gap-2">
+                    <AttachmentButton record={cn} type="credit_notes" />
                     <button
                       onClick={() => setActiveMenuId(activeMenuId === cn.id ? null : cn.id)}
                       className="text-slate-300 dark:text-slate-600 hover:text-indigo-600 transition-colors p-1"
@@ -542,12 +589,22 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
           <button className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 rounded-xl text-sm font-bold text-white shadow-md shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-colors">Next</button>
         </div>
       </div>
+      {/* Modals */}
       <DocumentViewerModal
         isOpen={!!viewingDocument}
         onClose={() => setViewingDocument(null)}
         record={viewingDocument?.record || null}
         type={viewingDocument?.type || 'invoice'}
         company={company}
+      />
+      <DocumentAttachmentModal
+        isOpen={attachmentModal.isOpen}
+        onClose={() => setAttachmentModal(prev => ({ ...prev, isOpen: false }))}
+        recordId={attachmentModal.recordId}
+        recordType={attachmentModal.recordType}
+        currentAttachmentUrl={attachmentModal.currentUrl}
+        onUploadSuccess={handleAttachmentSuccess}
+        readonly={false} // Users can always upload/delete as per requirements (or add role check if needed)
       />
     </div >
   );

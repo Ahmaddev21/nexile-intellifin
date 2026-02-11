@@ -65,7 +65,8 @@ const mapInvoice = (i: any, projectMap: Record<string, string> = {}): Invoice =>
     projectName: projectMap[i.project_id] || 'Unknown',
     amount: Number(i.amount),
     date: i.date,
-    status: i.status
+    status: i.status,
+    attachment_url: i.attachment_url
 });
 
 const mapExpense = (e: any, projectMap: Record<string, string> = {}): Expense => ({
@@ -76,7 +77,8 @@ const mapExpense = (e: any, projectMap: Record<string, string> = {}): Expense =>
     amount: Number(e.amount),
     date: e.date,
     type: e.type,
-    status: e.status
+    status: e.status,
+    attachment_url: e.attachment_url
 });
 
 const mapPayable = (p: any, projectMap: Record<string, string> = {}): PayableInvoice => ({
@@ -88,7 +90,8 @@ const mapPayable = (p: any, projectMap: Record<string, string> = {}): PayableInv
     date: p.date,
     dueDate: p.due_date,
     status: p.status,
-    description: p.description
+    description: p.description,
+    attachment_url: p.attachment_url
 });
 
 const mapCreditNote = (c: any): CreditNote => ({
@@ -99,7 +102,8 @@ const mapCreditNote = (c: any): CreditNote => ({
     reason: c.reason,
     status: c.status,
     createdAt: c.created_at,
-    updatedAt: c.updated_at
+    updatedAt: c.updated_at,
+    attachment_url: c.attachment_url
 });
 
 export const createInvoice = async (data: any) => {
@@ -735,4 +739,35 @@ export const regenerateJoinCode = async () => {
     const { data, error } = await supabase.rpc('regenerate_join_code');
     if (error) throw error;
     return data as string;
+};
+
+// --- Storage / Attachments ---
+
+export const getAttachmentUrl = (path: string) => {
+    if (!path) return null;
+    const { data } = supabase.storage.from('finance_attachments').getPublicUrl(path);
+    return data.publicUrl;
+};
+
+export const uploadAttachment = async (file: File, recordType: string, recordId: string) => {
+    const user = await getUser();
+    const companyId = await getCompanyId();
+
+    if (!user || !companyId) throw new Error('Authentication required');
+
+    // Path structure: {companyId}/{recordType}/{recordId}/{timestamp}_{filename}
+    // Sanitizing filename
+    const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const path = `${companyId}/${recordType}/${recordId}/${Date.now()}_${cleanName}`;
+
+    const { data, error } = await supabase.storage
+        .from('finance_attachments')
+        .upload(path, file);
+
+    if (error) {
+        console.error('Upload failed:', error);
+        throw error;
+    }
+
+    return path; // Store the relative path in DB
 };
