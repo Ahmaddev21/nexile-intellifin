@@ -33,11 +33,12 @@ begin
   return query
   select 
     p.id as user_id,
-    p.username,
+    coalesce(p.username, u.email, 'Unknown User') as username,
     coalesce(p.points, 0) as points,
     coalesce(p.level, 1) as level,
     rank() over (order by coalesce(p.points, 0) desc) as rank
   from public.profiles p
+  join auth.users u on p.id = u.id
   join public.company_users cu on p.id = cu.user_id
   where cu.company_id = v_company_id
   order by points desc

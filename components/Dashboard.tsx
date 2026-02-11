@@ -219,13 +219,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 space-y-6">
-          <GamificationWidget
-            progress={progress}
-            userName={userName}
-            leaderboard={leaderboard}
-            currentUserId={currentUserId}
-          />
+        <div className="lg:col-span-2 space-y-6">
 
           {/* Revenue vs Expenses Chart */}
           <div className="glass-panel p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
@@ -276,8 +270,14 @@ const Dashboard: React.FC<DashboardProps> = ({ data, insights, isLoadingInsights
           </div>
         </div>
 
-        <div className="lg:col-span-1">
-          <GamificationWidget progress={progress} />
+        {/* Right Column: Gamification & Sidebar */}
+        <div className="space-y-6">
+          <GamificationWidget
+            progress={progress}
+            userName={userName}
+            leaderboard={leaderboard}
+            currentUserId={currentUserId}
+          />
         </div>
       </div>
       <RevenueBreakdownModal
