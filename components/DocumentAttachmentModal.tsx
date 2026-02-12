@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, FileText, Trash2, Eye, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { uploadAttachment, getAttachmentUrl } from '../services/api';
+import { uploadAttachment, getSignedAttachmentUrl } from '../services/api';
 import { supabase } from '../lib/supabase';
 
 interface DocumentAttachmentModalProps {
@@ -107,7 +107,19 @@ const DocumentAttachmentModal: React.FC<DocumentAttachmentModalProps> = ({
         }
     };
 
-    const fullUrl = currentAttachmentUrl ? getAttachmentUrl(currentAttachmentUrl) : null;
+    const [signedUrl, setSignedUrl] = useState<string | null>(null);
+
+    React.useEffect(() => {
+        const fetchUrl = async () => {
+            if (currentAttachmentUrl) {
+                const url = await getSignedAttachmentUrl(currentAttachmentUrl);
+                setSignedUrl(url);
+            } else {
+                setSignedUrl(null);
+            }
+        };
+        fetchUrl();
+    }, [currentAttachmentUrl]);
 
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -154,7 +166,7 @@ const DocumentAttachmentModal: React.FC<DocumentAttachmentModalProps> = ({
 
                             <div className="grid grid-cols-2 gap-3">
                                 <a
-                                    href={fullUrl || '#'}
+                                    href={signedUrl || '#'}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="flex items-center justify-center gap-2 p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors"

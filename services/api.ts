@@ -743,10 +743,17 @@ export const regenerateJoinCode = async () => {
 
 // --- Storage / Attachments ---
 
-export const getAttachmentUrl = (path: string) => {
+export const getSignedAttachmentUrl = async (path: string) => {
     if (!path) return null;
-    const { data } = supabase.storage.from('finance_attachments').getPublicUrl(path);
-    return data.publicUrl;
+    const { data, error } = await supabase.storage
+        .from('finance_attachments')
+        .createSignedUrl(path, 3600); // 1 hour expiry
+
+    if (error) {
+        console.error('Error creating signed URL:', error);
+        return null;
+    }
+    return data.signedUrl;
 };
 
 export const uploadAttachment = async (file: File, recordType: string, recordId: string) => {
