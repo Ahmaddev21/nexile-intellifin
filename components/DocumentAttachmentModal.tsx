@@ -25,7 +25,20 @@ const DocumentAttachmentModal: React.FC<DocumentAttachmentModalProps> = ({
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const [signedUrl, setSignedUrl] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    React.useEffect(() => {
+        const fetchUrl = async () => {
+            if (currentAttachmentUrl && isOpen) {
+                const url = await getSignedAttachmentUrl(currentAttachmentUrl);
+                setSignedUrl(url);
+            } else {
+                setSignedUrl(null);
+            }
+        };
+        fetchUrl();
+    }, [currentAttachmentUrl, isOpen]);
 
     if (!isOpen) return null;
 
@@ -96,9 +109,6 @@ const DocumentAttachmentModal: React.FC<DocumentAttachmentModalProps> = ({
 
             if (dbError) throw dbError;
 
-            // 2. (Optional) Delete from Storage - for now we can keep orphan files or clean up later.
-            // Implementing delete from storage needs the path.
-
             onUploadSuccess(''); // Update parent UI to show no file
             onClose();
         } catch (err: any) {
@@ -106,20 +116,6 @@ const DocumentAttachmentModal: React.FC<DocumentAttachmentModalProps> = ({
             setIsUploading(false);
         }
     };
-
-    const [signedUrl, setSignedUrl] = useState<string | null>(null);
-
-    React.useEffect(() => {
-        const fetchUrl = async () => {
-            if (currentAttachmentUrl) {
-                const url = await getSignedAttachmentUrl(currentAttachmentUrl);
-                setSignedUrl(url);
-            } else {
-                setSignedUrl(null);
-            }
-        };
-        fetchUrl();
-    }, [currentAttachmentUrl]);
 
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
