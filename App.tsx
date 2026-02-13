@@ -10,6 +10,8 @@ import { getFinancialInsights } from './services/geminiService';
 import { fetchFinancialData, createInvoice, createExpense, updateInvoice, updateExpense, createPayableInvoice, updatePayableInvoice, createCreditNote, updateCreditNote } from './services/api';
 import AuthPage from './components/AuthPage';
 import CreateTransactionModal from './components/CreateTransactionModal';
+import Pricing from './components/Pricing';
+import { useSubscription } from './hooks/useSubscription';
 import { Building2, Globe, Coins, Calendar, ArrowRight, Loader2, Rocket, Zap, Shield, PartyPopper, User as UserIcon, Sun, Moon } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -51,12 +53,23 @@ const App: React.FC = () => {
     fiscalYearStart: 'January'
   });
 
+  const { subscription, isLoading: isSubscriptionLoading, isActive: isSubscriptionActive, refetch: refetchSubscription } = useSubscription(company.id);
+
   // Initial Data Load
   useEffect(() => {
     if (token) {
       loadInitialData();
     }
   }, [token]);
+
+  // Subscription Enforcement
+  useEffect(() => {
+    if (isSetupComplete && !isSubscriptionLoading && !isSubscriptionActive() && activeView !== 'pricing') {
+      // If setup is done, subscription loaded, but inactive -> force pricing
+      // Exception: If user role is admin they can pay. If member, they see lock screen (handled in Pricing or AccessDenied)
+      setActiveView('pricing');
+    }
+  }, [isSetupComplete, isSubscriptionLoading, subscription, activeView]);
 
   const loadInitialData = async () => {
     setIsLoading(true);
@@ -352,16 +365,24 @@ const App: React.FC = () => {
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
-  if (!token) {
-    return <AuthPage onLogin={handleLogin} />;
-  }
-
   if (isLoading && !isSetupComplete && onboardingStep === 1) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mx-auto mb-4" />
           <p className="text-slate-400 font-medium">Securing your session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading for subscription check if we are logged in and setup
+  if (isSetupComplete && isSubscriptionLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400 font-medium">Verifying subscription...</p>
         </div>
       </div>
     );
@@ -558,6 +579,16 @@ const App: React.FC = () => {
         return <AIChat data={financialData} />;
       case 'projects':
         return <Projects data={financialData} currencySymbol={currencySymbol} onDataRefresh={refreshData} userRole={userRole} />;
+      case 'pricing':
+        return (
+          <div className="relative z-50">
+            <Pricing
+              companyId={company.id || ''}
+              currentUserId={userId || ''}
+              onUpgradeSuccess={() => refetchSubscription()}
+            />
+          </div>
+        );
       case 'team':
         return <TeamSettings company={company} onUpdate={refreshData} userRole={userRole} />;
       default:
