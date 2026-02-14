@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@12.0.0?target=deno";
+import { serve } from "http/server";
+import Stripe from "stripe";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
     apiVersion: "2022-11-15",
@@ -77,11 +77,6 @@ serve(async (req) => {
                 UserDefinedField: JSON.stringify({ company_id, user_id, plan: 'pro_annual' }),
             };
 
-            // In a real implementation, you might call 'InitiatePayment' first to get methods
-            // For brevity, we assume 'ExecutePayment' directly if we know the method ID, or simple Payment Link generation
-            // Let's use 'SendPayment' (Invoice Link) for simplest integration if ExecutePayment fails or is complex without methodId
-            // Actually, 'ExecutePayment' is standard for direct integration.
-
             const resp = await fetch(`${MYFATOORAH_API_URL}/v2/ExecutePayment`, {
                 method: "POST",
                 headers: {
@@ -104,8 +99,9 @@ serve(async (req) => {
 
         throw new Error("Unsupported currency");
 
-    } catch (error: any) {
-        return new Response(JSON.stringify({ error: error.message }), {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        return new Response(JSON.stringify({ error: message }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

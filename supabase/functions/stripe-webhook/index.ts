@@ -1,6 +1,6 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@12.0.0?target=deno";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "http/server";
+import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
     apiVersion: "2022-11-15",
@@ -26,8 +26,9 @@ serve(async (req) => {
 
     try {
         event = await stripe.webhooks.constructEventAsync(body, signature, endpointSecret);
-    } catch (err: any) {
-        return new Response(`Webhook Signature Error: ${err.message}`, { status: 400 });
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        return new Response(`Webhook Signature Error: ${message}`, { status: 400 });
     }
 
     // Handle the event

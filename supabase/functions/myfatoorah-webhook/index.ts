@@ -1,22 +1,15 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "http/server";
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
-const MYFATOORAH_SECRET_KEY = Deno.env.get("MYFATOORAH_WEBHOOK_SECRET");
+const _MYFATOORAH_SECRET_KEY = Deno.env.get("MYFATOORAH_WEBHOOK_SECRET");
 
 serve(async (req) => {
     // MyFatoorah sends signature in custom header, or we can validate by calling GetPaymentStatus
-    const signature = req.headers.get("MyFatoorah-Signature");
-
-    // For simplicity/security in this implementation, we will fetch the payment status from MyFatoorah
-    // using the 'Key' or 'PaymentId' provided in the body to verify authenticity.
-    // However, the standard webhook payload usually contains the status.
-
-    // Assume Standard MyFatoorah Webhook Payload:
-    // { Event: 'TransactionStatusChanged', Data: { InvoiceId: 123, PaymentId: 456, TransactionStatus: 'Succss' ... } }
+    const _signature = req.headers.get("MyFatoorah-Signature");
 
     const body = await req.json();
     const { Event, Data } = body;
@@ -27,7 +20,7 @@ serve(async (req) => {
         let metadata;
         try {
             metadata = JSON.parse(UserDefinedField);
-        } catch (e) {
+        } catch (_e) {
             console.error('Failed to parse metadata');
         }
 
