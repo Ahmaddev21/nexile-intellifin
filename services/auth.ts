@@ -9,24 +9,41 @@ export const login = async (email, password) => {
 
     if (error) throw error;
 
-    // Fetch company association
-    // We get the company via the company_users table
+    let company = undefined;
+    let role: string | undefined = undefined;
+
+    // Method 1: Fetch company via company_users join (preferred)
     const { data: companyUser, error: companyError } = await supabase
         .from('company_users')
         .select('role, company:companies(*)')
         .eq('user_id', data.user.id)
-        .single();
+        .maybeSingle();
 
-    if (companyError && companyError.code !== 'PGRST116') {
-        // Log error but don't fail login if user has no company yet (edge case)
-        console.error("Error fetching company:", companyError);
+    if (companyUser && companyUser.company) {
+        company = Array.isArray(companyUser.company) ? companyUser.company[0] : companyUser.company;
+        role = companyUser.role;
+        console.log('Login: Company found via company_users:', company?.name);
+    } else {
+        // Method 2: Fallback - direct query on companies table
+        console.warn('Login: company_users query failed or empty, trying direct fallback...', companyError);
+        const { data: ownCompany } = await supabase
+            .from('companies')
+            .select('*')
+            .eq('user_id', data.user.id)
+            .maybeSingle();
+
+        if (ownCompany) {
+            company = ownCompany;
+            role = 'admin'; // If they own the company, they're admin
+            console.log('Login: Company found via direct lookup:', ownCompany.name);
+        }
     }
 
     return {
         token: data.session?.access_token,
         user: data.user,
-        company: companyUser?.company,
-        role: companyUser?.role
+        company,
+        role
     };
 };
 
