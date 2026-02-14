@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 export interface Subscription {
@@ -13,6 +13,16 @@ export const useSubscription = (companyId?: string) => {
     const [subscription, setSubscription] = useState<Subscription | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const prevCompanyId = useRef(companyId);
+
+    // When companyId changes, immediately set loading to true
+    // This prevents the enforcement useEffect from firing with stale data
+    if (companyId !== prevCompanyId.current) {
+        prevCompanyId.current = companyId;
+        if (companyId) {
+            setIsLoading(true);
+        }
+    }
 
     const fetchSubscription = async () => {
         if (!companyId) {
@@ -47,7 +57,7 @@ export const useSubscription = (companyId?: string) => {
 
     // Helper to check if active
     const isActive = () => {
-        if (!subscription) return false; // No sub = Inactive (unless we want default trial, but requirement says "User signs up -> status=inactive")
+        if (!subscription) return false;
 
         const isStatusActive = ['active', 'trial'].includes(subscription.status);
         const notExpired = subscription.current_period_end ? new Date(subscription.current_period_end) > new Date() : true;
