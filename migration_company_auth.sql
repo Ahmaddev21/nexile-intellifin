@@ -79,6 +79,7 @@ $$ language plpgsql security definer;
 -- 6. Update RLS Policies (Switch from User Ownership to Company Membership)
 
 -- Company Users Policies
+drop policy if exists "Users can view members of their company" on public.company_users;
 create policy "Users can view members of their company"
 on public.company_users for select
 using (
@@ -91,47 +92,57 @@ using (
 
 -- COMPANIES: Members can view, Only Admins can update
 drop policy if exists "Users can view own company" on public.companies;
+drop policy if exists "Company members can view company" on public.companies;
 create policy "Company members can view company"
 on public.companies for select
 using ( id in (select company_id from public.company_users where user_id = auth.uid()) );
 
 -- PROJECTS
 drop policy if exists "Users can view own projects" on public.projects;
+drop policy if exists "Company members can view projects" on public.projects;
 create policy "Company members can view projects"
 on public.projects for select using ( public.is_company_member(company_id) );
 
 drop policy if exists "Users can insert own projects" on public.projects;
+drop policy if exists "Company members can insert projects" on public.projects;
 create policy "Company members can insert projects"
 on public.projects for insert with check ( public.is_company_member(company_id) );
 
 drop policy if exists "Users can update own projects" on public.projects;
+drop policy if exists "Company members can update projects" on public.projects;
 create policy "Company members can update projects"
 on public.projects for update using ( public.is_company_member(company_id) );
 
 -- INVOICES
 drop policy if exists "Users can view own invoices" on public.invoices;
+drop policy if exists "Company members can view invoices" on public.invoices;
 create policy "Company members can view invoices"
 on public.invoices for select using ( public.is_company_member(company_id) );
 
 drop policy if exists "Users can insert own invoices" on public.invoices;
+drop policy if exists "Company members can insert invoices" on public.invoices;
 create policy "Company members can insert invoices"
 on public.invoices for insert with check ( public.is_company_member(company_id) );
 
 drop policy if exists "Users can update own invoices" on public.invoices;
+drop policy if exists "Company members can update invoices" on public.invoices;
 create policy "Company members can update invoices"
 on public.invoices for update using ( public.is_company_member(company_id) );
 
 
 -- EXPENSES
 drop policy if exists "Users can view own expenses" on public.expenses;
+drop policy if exists "Company members can view expenses" on public.expenses;
 create policy "Company members can view expenses"
 on public.expenses for select using ( public.is_company_member(company_id) );
 
 drop policy if exists "Users can insert own expenses" on public.expenses;
+drop policy if exists "Company members can insert expenses" on public.expenses;
 create policy "Company members can insert expenses"
 on public.expenses for insert with check ( public.is_company_member(company_id) );
 
 drop policy if exists "Users can update own expenses" on public.expenses;
+drop policy if exists "Company members can update expenses" on public.expenses;
 create policy "Company members can update expenses"
 on public.expenses for update using ( public.is_company_member(company_id) );
 
