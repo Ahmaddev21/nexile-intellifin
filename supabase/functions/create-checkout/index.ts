@@ -21,7 +21,7 @@ serve(async (req) => {
     }
 
     try {
-        const { price_id, _currency, company_id, user_id, return_url } = await req.json();
+        const { price_id: _price_id, _currency, company_id, user_id, return_url } = await req.json();
 
         if (!company_id || !user_id) {
             throw new Error("Missing company_id or user_id");

@@ -34,7 +34,7 @@ serve(async (req) => {
     // Handle the event
     if (event.type === "checkout.session.completed") {
         const session = event.data.object;
-        const { company_id, plan, user_id } = session.metadata || {};
+        const { company_id, plan, user_id: _user_id } = session.metadata || {};
 
         if (company_id) {
             // Calculate Access Period (1 Year)

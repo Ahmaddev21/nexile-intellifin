@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "lib": ["deno.ns", "deno.unstable"]
+    "lib": ["deno.ns", "deno.window", "deno.unstable"]
   },
   "imports": {
     "http/server": "https://deno.land/std@0.168.0/http/server.ts",
