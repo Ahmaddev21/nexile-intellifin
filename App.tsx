@@ -179,11 +179,17 @@ const App: React.FC = () => {
     try {
       setIsLoading(true);
       const me = await import('./services/auth').then(m => m.getMe());
-      if (!me) {
+
+      // If getMe() fails but we have a token, we might still be good.
+      // But company update requires Auth. Let's try to trust the 'token' state if getMe is null
+      if (!me && !token) {
         alert('Please sign in to initialize your workspace.');
         setIsSetupComplete(false);
         return;
       }
+
+      // If we have a token but getMe failed, it might be a temporary network blip or race condition.
+      // We will proceed to try updateCompany. If that fails with 401, then we know for sure.
       const updatedCompany = await import('./services/api').then(m => m.updateCompany(company));
       setCompany(updatedCompany);
       setIsSetupComplete(true);
