@@ -163,6 +163,9 @@ const App: React.FC = () => {
     setUserRole('member');
     setIsSetupComplete(false);
     setFinancialData({ projects: [], invoices: [], expenses: [], payableInvoices: [], creditNotes: [] });
+
+    // Force reload to clear all states and hooks
+    window.location.reload();
   };
 
   const finishOnboarding = async () => {
