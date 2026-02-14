@@ -706,9 +706,25 @@ export const getUserRole = async (userId: string) => {
     return data?.role as 'admin' | 'member' | undefined;
 };
 
-export const updateCompany = async (companyData: any) => {
-    const user = await getUser();
-    const companyId = await getCompanyId();
+export const updateCompany = async (companyData: any, explicitUserId?: string) => {
+    let user = null;
+    if (explicitUserId) {
+        user = { id: explicitUserId };
+    } else {
+        user = await getUser();
+    }
+
+    // If we have an explicit user ID, we might not be able to get companyId from company_users table via RLS easily
+    // So we need to be careful. Ideally we should trust the company ID in the companyData if provided, or fetch it.
+
+    // For onboarding, the user IS the owner, so we can try to find the company owned by them
+    let companyId = await getCompanyId();
+
+    if (!companyId && user) {
+        // Fallback: Find company owned by this user
+        const { data } = await supabase.from('companies').select('id').eq('user_id', user.id).single();
+        if (data) companyId = data.id;
+    }
 
     if (user && companyId) {
         // Update company
