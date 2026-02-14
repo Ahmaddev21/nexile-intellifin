@@ -12,6 +12,7 @@ import AuthPage from './components/AuthPage';
 import CreateTransactionModal from './components/CreateTransactionModal';
 import Pricing from './components/Pricing';
 import { useSubscription } from './hooks/useSubscription';
+import { supabase } from './lib/supabase';
 import { Building2, Globe, Coins, Calendar, ArrowRight, Loader2, Rocket, Zap, Shield, PartyPopper, User as UserIcon, Sun, Moon } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -153,7 +154,13 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+
     localStorage.removeItem('token');
     localStorage.removeItem('userName');
     localStorage.removeItem('userRole');

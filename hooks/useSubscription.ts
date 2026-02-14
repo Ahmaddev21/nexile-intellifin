@@ -22,6 +22,7 @@ export const useSubscription = (companyId?: string) => {
 
         try {
             setIsLoading(true);
+            console.log('Fetching subscription for company:', companyId);
             const { data, error } = await supabase
                 .from('subscriptions')
                 .select('*')
@@ -30,6 +31,7 @@ export const useSubscription = (companyId?: string) => {
 
             if (error) throw error;
 
+            console.log('Subscription data fetched:', data);
             setSubscription(data);
         } catch (err: any) {
             console.error('Error fetching subscription:', err);
