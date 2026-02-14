@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import TeamSettings from './components/TeamSettings';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -54,6 +54,9 @@ const App: React.FC = () => {
 
   const { subscription, isLoading: isSubscriptionLoading, isActive: isSubscriptionActive, refetch: refetchSubscription } = useSubscription(company.id);
 
+  // Flag to prevent loadInitialData from overriding handleLogin's state
+  const loginJustCompleted = useRef(false);
+
   // Initial Data Load
   useEffect(() => {
     if (token) {
@@ -71,6 +74,11 @@ const App: React.FC = () => {
   }, [isSetupComplete, isSubscriptionLoading, subscription, activeView]);
 
   const loadInitialData = async () => {
+    // If handleLogin just ran, it already set company + isSetupComplete.
+    // Skip the company fetch to avoid overriding that state.
+    const skipCompanyFetch = loginJustCompleted.current;
+    loginJustCompleted.current = false;
+
     setIsLoading(true);
     try {
       // Validate config first to trigger ErrorBoundary if missing keys
@@ -88,9 +96,6 @@ const App: React.FC = () => {
         } catch (e) { }
       }
 
-      // Try fetching company with aggressive user ID if standard auth fails internally
-      const companyData = await import('./services/api').then(m => m.fetchCompany(extractedUserId));
-
       const [data, userData] = await Promise.all([
         import('./services/api').then(m => m.fetchFinancialData()),
         import('./services/auth').then(m => m.getMe())
@@ -98,23 +103,35 @@ const App: React.FC = () => {
 
       setFinancialData(data);
       if (userData) {
-        // Supabase User object puts custom fields in user_metadata
         const username = userData.user_metadata?.username || userData.email || 'User';
         setUserName(username);
         setUserId(userData.id);
         localStorage.setItem('userName', username);
 
-        // Try to recover role from local storage or default to member until refreshed
         const savedRole = localStorage.getItem('userRole') as 'admin' | 'member';
         if (savedRole) setUserRole(savedRole);
       }
 
-      if (companyData) {
-        setCompany(companyData);
-        setIsSetupComplete(true);
-        // If we have company data, we should also fetch the role specifically if not in localstorage or to verify
-        // For now, simpler to rely on auth login return, but for page reload we need to fetch it.
-        // Let's add a quick fetch for role here if we have a user
+      // Only fetch company if handleLogin didn't already set it
+      if (!skipCompanyFetch) {
+        const companyData = await import('./services/api').then(m => m.fetchCompany(extractedUserId));
+
+        if (companyData) {
+          setCompany(companyData);
+          setIsSetupComplete(true);
+          if (userData?.id) {
+            import('./services/api').then(m => m.getUserRole(userData.id)).then(role => {
+              if (role) {
+                setUserRole(role);
+                localStorage.setItem('userRole', role);
+              }
+            });
+          }
+        } else {
+          setIsSetupComplete(false);
+        }
+      } else {
+        // handleLogin already set company, just fetch role if needed
         if (userData?.id) {
           import('./services/api').then(m => m.getUserRole(userData.id)).then(role => {
             if (role) {
@@ -123,9 +140,6 @@ const App: React.FC = () => {
             }
           });
         }
-      } else {
-        // Only force showing auth if it's truly a new user without a company
-        setIsSetupComplete(false);
       }
 
       // Load AI Insights in background
@@ -146,8 +160,10 @@ const App: React.FC = () => {
   };
 
   const handleLogin = (newToken: string, user: any, companyData?: any, role: 'admin' | 'member' = 'member') => {
+    // Set flag BEFORE updating token so loadInitialData doesn't override our state
+    loginJustCompleted.current = true;
+
     localStorage.setItem('token', newToken);
-    // Supabase User object puts custom fields in user_metadata
     const username = user.user_metadata?.username || user.email || 'User';
     localStorage.setItem('userName', username);
     localStorage.setItem('userRole', role);
