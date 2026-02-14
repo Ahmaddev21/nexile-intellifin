@@ -22,7 +22,7 @@ const App: React.FC = () => {
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [onboardingStep, setOnboardingStep] = useState(0); // Fix: Start at step 0
   const [isSetupComplete, setIsSetupComplete] = useState(false);
   const [userProgress, setUserProgress] = useState<UserProgress>({
     points: 0,
@@ -78,9 +78,23 @@ const App: React.FC = () => {
       // Validate config first to trigger ErrorBoundary if missing keys
       import('./lib/supabase').then(m => m.validateConfig());
 
-      const [data, companyData, userData] = await Promise.all([
+      // Attempt to extract userId from token aggressively
+      let extractedUserId = undefined;
+      if (token) {
+        try {
+          const payload = token.split('.')[1];
+          if (payload) {
+            const decoded = JSON.parse(atob(payload));
+            if (decoded && decoded.sub) extractedUserId = decoded.sub;
+          }
+        } catch (e) { }
+      }
+
+      // Try fetching company with aggressive user ID if standard auth fails internally
+      const companyData = await import('./services/api').then(m => m.fetchCompany(extractedUserId));
+
+      const [data, userData] = await Promise.all([
         import('./services/api').then(m => m.fetchFinancialData()),
-        import('./services/api').then(m => m.fetchCompany()),
         import('./services/auth').then(m => m.getMe())
       ]);
 

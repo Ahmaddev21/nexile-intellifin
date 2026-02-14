@@ -667,10 +667,16 @@ const ensureProjectFirstActivity = async (projectId?: string, activityDateIso?: 
     }
 };
 
-export const fetchCompany = async () => {
-    const user = await getUser();
+export const fetchCompany = async (explicitUserId?: string) => {
+    let user = null;
+    if (explicitUserId) {
+        user = { id: explicitUserId };
+    } else {
+        user = await getUser();
+    }
+
     if (user) {
-        // Fetch via company_users to get the linked company
+        // Method 1: Fetch via company_users to get the linked company (standard way)
         const { data } = await supabase
             .from('company_users')
             .select('company:companies(*)')
@@ -678,23 +684,32 @@ export const fetchCompany = async () => {
             .single();
 
         if (data && data.company) {
-            // Fix: Handle both array (one-to-many inferred) or object (one-to-one inferred)
             const co = Array.isArray(data.company) ? data.company[0] : data.company;
+            if (co) return mapCompany(co);
+        }
 
-            if (!co) return null;
+        // Method 2: Fallback - Check if user owns a company directly (for onboarding race conditions)
+        const { data: ownCompany } = await supabase
+            .from('companies')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
 
-            return {
-                name: co.name,
-                industry: co.industry,
-                currency: co.currency,
-                fiscalYearStart: co.fiscal_year_start || co.fiscalYearStart || 'January',
-                joinCode: co.join_code,
-                id: co.id
-            };
+        if (ownCompany) {
+            return mapCompany(ownCompany);
         }
     }
     return null;
 };
+
+const mapCompany = (co: any) => ({
+    name: co.name,
+    industry: co.industry,
+    currency: co.currency,
+    fiscalYearStart: co.fiscal_year_start || co.fiscalYearStart || 'January',
+    joinCode: co.join_code,
+    id: co.id
+});
 
 export const getUserRole = async (userId: string) => {
     const { data } = await supabase
