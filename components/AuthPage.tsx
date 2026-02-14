@@ -3,7 +3,7 @@ import { Mail, Lock, User, ArrowRight, Loader2, Rocket, Shield, Users } from 'lu
 import { login, signup } from '../services/auth';
 
 interface AuthPageProps {
-    onLogin: (token: string, user: any, company?: any) => void;
+    onLogin: (token: string, user: any, company?: any, role?: 'admin' | 'member') => void;
 }
 
 const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
@@ -36,11 +36,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
 
         try {
             if (authMode === 'login') {
-                const { token, user, company } = await login(formData.email, formData.password);
-                onLogin(token, user, company);
+                const { token, user, company, role } = await login(formData.email, formData.password);
+                onLogin(token, user, company, role as 'admin' | 'member' | undefined);
             } else {
                 // Signup (Create or Join)
-                const { token, user, company } = await signup(
+                const { token, user, company, role } = await signup(
                     formData.username,
                     formData.email,
                     formData.password,
@@ -48,7 +48,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
                     authMode === 'signup-create' ? formData.currency : undefined,
                     authMode === 'signup-join' ? formData.joinCode : undefined
                 );
-                onLogin(token, user, company);
+                onLogin(token, user, company, role as 'admin' | 'member' | undefined);
             }
         } catch (err: any) {
             console.error("Auth Error:", err);

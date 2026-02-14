@@ -13,7 +13,7 @@ import CreateTransactionModal from './components/CreateTransactionModal';
 import Pricing from './components/Pricing';
 import { useSubscription } from './hooks/useSubscription';
 import { supabase } from './lib/supabase';
-import { Building2, Globe, Coins, Calendar, ArrowRight, Loader2, Rocket, Zap, Shield, PartyPopper, User as UserIcon, Sun, Moon } from 'lucide-react';
+import { ArrowRight, Loader2, Rocket, Zap, Shield, PartyPopper, Sun, Moon } from 'lucide-react';
 
 const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
@@ -22,7 +22,6 @@ const App: React.FC = () => {
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState(0); // Fix: Start at step 0
   const [isSetupComplete, setIsSetupComplete] = useState(false);
   const [userProgress, setUserProgress] = useState<UserProgress>({
     points: 0,
@@ -43,7 +42,6 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'invoice' | 'expense' | 'payable' | 'credit_note'>('invoice');
   const [editingTransaction, setEditingTransaction] = useState<any | null>(null);
-  const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'member'>('member');
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -126,9 +124,8 @@ const App: React.FC = () => {
           });
         }
       } else {
-        // Only force onboarding if it's truly a new user without a company
+        // Only force showing auth if it's truly a new user without a company
         setIsSetupComplete(false);
-        setOnboardingStep(0);
       }
 
       // Load AI Insights in background
@@ -161,9 +158,19 @@ const App: React.FC = () => {
     setUserRole(role);
 
     if (companyData) {
-      setCompany(companyData);
+      // Map the raw Supabase company object to our Company type
+      const mapped = {
+        name: companyData.name || '',
+        industry: companyData.industry || 'Services',
+        currency: companyData.currency || 'USD',
+        fiscalYearStart: companyData.fiscal_year_start || companyData.fiscalYearStart || 'January',
+        joinCode: companyData.join_code || companyData.joinCode,
+        id: companyData.id
+      };
+      setCompany(mapped);
       setIsSetupComplete(true);
     } else {
+      // No company found - user will see AuthPage to create/join one
       setIsSetupComplete(false);
     }
   };
@@ -190,54 +197,7 @@ const App: React.FC = () => {
     window.location.href = '/';
   };
 
-  const finishOnboarding = async () => {
-    try {
-      setIsLoading(true);
-      const me = await import('./services/auth').then(m => m.getMe());
-
-      // If getMe() fails but we have a token, we might still be good.
-      // But company update requires Auth. Let's try to trust the 'token' state if getMe is null
-      let hasValidSession = !!me;
-
-      if (!hasValidSession && token) {
-        try {
-          // Brute force check: if token looks like a JWT, assume we are good
-          const payload = token.split('.')[1];
-          if (payload) {
-            const decoded = JSON.parse(atob(payload));
-            if (decoded && decoded.exp > Date.now() / 1000) {
-              console.log('Force allowing onboarding with local token');
-              hasValidSession = true;
-            }
-          }
-        } catch (e) {
-          console.error('Initial token check failed', e);
-        }
-      }
-
-      if (!hasValidSession) {
-        alert('Please sign in to initialize your workspace.');
-        setIsSetupComplete(false);
-        return;
-      }
-
-      // If we have a token but getMe failed, it might be a temporary network blip or race condition.
-      // We will proceed to try updateCompany. If that fails with 401, then we know for sure.
-      const updatedCompany = await import('./services/api').then(m => m.updateCompany(company));
-      setCompany(updatedCompany);
-      setIsSetupComplete(true);
-      // Creator is always admin
-      setUserRole('admin');
-      localStorage.setItem('userRole', 'admin');
-
-      await refreshData();
-    } catch (error: any) {
-      console.error('Failed to save company settings:', error);
-      setOnboardingError(error.message || 'Failed to initialize workspace. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // finishOnboarding REMOVED - company creation now happens in AuthPage during signup
 
   // Sync theme with HTML element and localStorage
   useEffect(() => {
@@ -414,7 +374,7 @@ const App: React.FC = () => {
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
-  if (isLoading && !isSetupComplete && onboardingStep === 1) {
+  if (isLoading && !isSetupComplete) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
@@ -437,120 +397,9 @@ const App: React.FC = () => {
     );
   }
 
+  // If user is logged in but has NO company, show AuthPage again so they can create/join one
   if (!isSetupComplete) {
-    return (
-      <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950' : 'bg-slate-900'} flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-500`}>
-        {/* Background Elements */}
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600 rounded-full blur-[120px]"></div>
-          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-600 rounded-full blur-[120px]"></div>
-        </div>
-
-        <div className="max-w-md w-full glass-panel border-white/10 bg-white/5 rounded-[3rem] p-10 shadow-2xl relative z-10 border">
-          <div className="flex justify-between items-start mb-10 relative">
-            <div className="w-16 h-16 bg-indigo-600 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-indigo-900/50">
-              <Rocket className="w-8 h-8 text-white" />
-            </div>
-            <button
-              onClick={handleLogout}
-              className="text-xs font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-colors py-2 px-4 border border-white/5 hover:border-white/20 rounded-xl"
-            >
-              Sign Out
-            </button>
-          </div>
-
-          <div className="mb-8 flex gap-2">
-            {[0, 1, 2].map(i => (
-              <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${onboardingStep >= i ? 'bg-indigo-500' : 'bg-white/10'}`}></div>
-            ))}
-          </div>
-
-          {onboardingStep === 0 && (
-            <div className="space-y-6 animate-in slide-in-from-right duration-300">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-heading font-bold text-white mb-2">Welcome to Nexile</h2>
-                <p className="text-slate-400">Let's set up your financial intelligence engine</p>
-              </div>
-              <div className="space-y-4">
-                <div className="relative">
-                  <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
-                  <input
-                    type="text"
-                    placeholder="Your Full Name"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:ring-2 focus:ring-indigo-500/50"
-                  />
-                </div>
-                <div className="relative">
-                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
-                  <input
-                    type="text"
-                    placeholder="Company Name"
-                    value={company.name}
-                    onChange={(e) => setCompany({ ...company, name: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:ring-2 focus:ring-indigo-500/50"
-                  />
-                </div>
-              </div>
-              <button
-                onClick={() => setOnboardingStep(2)}
-                disabled={!userName || !company.name}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
-              >
-                Confirm Setup <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
-          )}
-
-          {/* Step 1 Removed - skipping straight to 2 */}
-
-          {onboardingStep === 2 && (
-            <div className="space-y-8 animate-in zoom-in duration-500 text-center">
-              <div className="w-24 h-24 bg-emerald-500/20 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                {isLoading ? <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" /> : <PartyPopper className="w-10 h-10 text-emerald-500" />}
-              </div>
-              <div>
-                <h2 className="text-3xl font-heading font-bold text-white mb-2">Workspace Ready</h2>
-                <p className="text-slate-400">{isLoading ? `Initializing OS for ${userName}...` : 'Your secure financial environment is prepared.'}</p>
-              </div>
-              <div className="p-6 bg-indigo-500/10 border border-indigo-500/20 rounded-3xl text-left">
-                <div className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3">Loaded Modules</div>
-                <ul className="space-y-2 text-sm text-slate-300">
-                  <li className="flex items-center gap-2"><span className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></span> Multi-Tenant Isolation: Active</li>
-                  <li className="flex items-center gap-2"><span className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></span> Scoped Database Connection: Stable</li>
-                  <li className="flex items-center gap-2"><span className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></span> AI Analysis Cluster: Ready</li>
-                </ul>
-              </div>
-
-              {/* Error Display for Onboarding */}
-              {onboardingError && (
-                <div className="flex flex-col gap-4">
-                  <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3 text-rose-300 text-sm">
-                    <Shield className="w-5 h-5 flex-shrink-0" />
-                    <span>{onboardingError}</span>
-                  </div>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold py-3 rounded-2xl transition-all border border-rose-500/20"
-                  >
-                    Sign Out & Try Again
-                  </button>
-                </div>
-              )}
-
-              <button
-                onClick={finishOnboarding}
-                disabled={isLoading}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
-              >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Enter Financial Command Center'}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    return <AuthPage onLogin={handleLogin} />;
   }
 
   const renderView = () => {
