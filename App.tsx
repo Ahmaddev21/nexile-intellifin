@@ -480,64 +480,16 @@ const App: React.FC = () => {
                 </div>
               </div>
               <button
-                onClick={() => setOnboardingStep(1)}
+                onClick={() => setOnboardingStep(2)}
                 disabled={!userName || !company.name}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
               >
-                Next Step <ArrowRight className="w-5 h-5" />
+                Confirm Setup <ArrowRight className="w-5 h-5" />
               </button>
             </div>
           )}
 
-          {onboardingStep === 1 && (
-            <div className="space-y-6 animate-in slide-in-from-right duration-300">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-heading font-bold text-white mb-2">Configure Workspace</h2>
-                <p className="text-slate-400">Currency & accounting preferences</p>
-              </div>
-              <div className="space-y-4">
-                <div className="relative">
-                  <Coins className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
-                  <select
-                    value={company.currency}
-                    onChange={(e) => setCompany({ ...company, currency: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none"
-                  >
-                    <option value="USD" className="bg-slate-900">USD - United States Dollar</option>
-                    <option value="EUR" className="bg-slate-900">EUR - Euro</option>
-                    <option value="GBP" className="bg-slate-900">GBP - British Pound</option>
-                    <option value="QAR" className="bg-slate-900">QAR - Qatari Riyal</option>
-                  </select>
-                </div>
-                <div className="relative">
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
-                  <select
-                    value={company.fiscalYearStart}
-                    onChange={(e) => setCompany({ ...company, fiscalYearStart: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none"
-                  >
-                    <option value="January" className="bg-slate-900">Fiscal Year: January</option>
-                    <option value="April" className="bg-slate-900">Fiscal Year: April</option>
-                    <option value="July" className="bg-slate-900">Fiscal Year: July</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setOnboardingStep(0)}
-                  className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-4 rounded-2xl transition-all"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={() => setOnboardingStep(2)}
-                  className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-indigo-600/20"
-                >
-                  Confirm
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Step 1 Removed - skipping straight to 2 */}
 
           {onboardingStep === 2 && (
             <div className="space-y-8 animate-in zoom-in duration-500 text-center">
