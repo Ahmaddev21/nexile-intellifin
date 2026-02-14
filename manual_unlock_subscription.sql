@@ -1,15 +1,7 @@
 -- ============================================
--- MANUAL SUBSCRIPTION UNLOCK FOR TESTING
+-- UNLOCK SUBSCRIPTION FOR ALL COMPANIES
 -- ============================================
--- Run this in Supabase SQL Editor (Dashboard > SQL Editor > New Query)
--- This will activate a 1-year test subscription for your company.
-
--- Step 1: Find your company (shows all companies so you can verify)
-SELECT id, name, user_id, join_code FROM companies;
-
--- Step 2: Insert/Update a test subscription
--- Replace 'YOUR_COMPANY_ID' with the actual ID from Step 1
--- Or use this auto-detect version that finds the first company:
+-- Run this in Supabase SQL Editor
 
 INSERT INTO subscriptions (
     company_id,
@@ -31,7 +23,6 @@ SELECT
     0,
     'stripe'
 FROM companies
-LIMIT 1
 ON CONFLICT (company_id) 
 DO UPDATE SET 
     status = 'active',
@@ -39,7 +30,7 @@ DO UPDATE SET
     current_period_end = NOW() + INTERVAL '1 year',
     plan_id = 'pro_annual';
 
--- Step 3: Verify it worked
-SELECT s.*, c.name as company_name 
+-- Verify
+SELECT s.status, s.current_period_end, c.name as company_name 
 FROM subscriptions s 
 JOIN companies c ON c.id = s.company_id;
