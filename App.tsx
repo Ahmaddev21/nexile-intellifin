@@ -171,10 +171,9 @@ const App: React.FC = () => {
     setIsSetupComplete(false);
     setFinancialData({ projects: [], invoices: [], expenses: [], payableInvoices: [], creditNotes: [] });
 
-    // Force reload to clear all states and hooks - REMOVED to prevent race condition
-    // window.location.reload(); 
-    // Instead, we trust the state change to re-render the AuthPage
-    console.log('Logged out successfully');
+    // Force reload to clear all states and hooks
+    // This is the most reliable way to reset the app state completely
+    window.location.href = '/';
   };
 
   const finishOnboarding = async () => {
