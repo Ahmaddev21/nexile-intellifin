@@ -42,6 +42,21 @@ export const signup = async (username, email, password, companyName, currency, j
 
     if (error) throw error;
 
+    // Handle case where signUp doesn't return a session
+    // This happens when: email already exists, or email confirmation is ON
+    if (!data.session) {
+        console.warn('No session after signup - attempting auto sign-in...');
+        // Try to sign in immediately (works if email confirmation is OFF)
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+        if (signInError) {
+            throw new Error('Account created but auto sign-in failed. Please sign in manually.');
+        }
+        data = signInData as any;
+    }
+
     if (data.session && data.user) {
         let company;
         let role = 'member';
@@ -52,18 +67,26 @@ export const signup = async (username, email, password, companyName, currency, j
             const { data: joinData, error: joinError } = await supabase
                 .rpc('join_company_by_code', { code: joinCode });
 
-            if (joinError) throw joinError; // Invalid code probably
+            if (joinError) {
+                console.error('Join company error:', joinError);
+                throw joinError;
+            }
             company = joinData;
 
         } else if (companyName) {
             // CREATE Mode
+            console.log('Creating company:', companyName, currency);
             const { data: createData, error: createError } = await supabase
                 .rpc('create_company_with_admin', {
                     name: companyName,
                     currency: currency || 'USD'
                 });
 
-            if (createError) throw createError;
+            if (createError) {
+                console.error('Create company error:', createError);
+                throw createError;
+            }
+            console.log('Company created:', createData);
             company = createData;
             role = 'admin';
         }
