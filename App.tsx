@@ -182,7 +182,25 @@ const App: React.FC = () => {
 
       // If getMe() fails but we have a token, we might still be good.
       // But company update requires Auth. Let's try to trust the 'token' state if getMe is null
-      if (!me && !token) {
+      let hasValidSession = !!me;
+
+      if (!hasValidSession && token) {
+        try {
+          // Brute force check: if token looks like a JWT, assume we are good
+          const payload = token.split('.')[1];
+          if (payload) {
+            const decoded = JSON.parse(atob(payload));
+            if (decoded && decoded.exp > Date.now() / 1000) {
+              console.log('Force allowing onboarding with local token');
+              hasValidSession = true;
+            }
+          }
+        } catch (e) {
+          console.error('Initial token check failed', e);
+        }
+      }
+
+      if (!hasValidSession) {
         alert('Please sign in to initialize your workspace.');
         setIsSetupComplete(false);
         return;
