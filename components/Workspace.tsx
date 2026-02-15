@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, Filter, Download, MoreVertical, CheckCircle2, AlertCircle, Clock, Tag, Trash2, Edit3, Send, Ban, CheckSquare, Loader2, FileText, Printer } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Search, Plus, Filter, Download, MoreVertical, CheckCircle2, AlertCircle, Clock, Tag, Trash2, Edit3, Send, Ban, CheckSquare, Loader2, FileText, Printer, X, Calendar, ChevronDown } from 'lucide-react';
 import { FinancialData, FinancialStatus, Company } from '../types';
 import { updateInvoice, deleteInvoice, updateExpense, deleteExpense, updatePayableInvoice, deletePayableInvoice } from '../services/api';
 import DocumentViewerModal from './DocumentViewerModal';
@@ -28,6 +28,27 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
   const [searchTerm, setSearchTerm] = useState('');
   const [categorizedIds, setCategorizedIds] = useState<Set<string>>(new Set());
 
+  // Expense filter state
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [projectFilter, setProjectFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Derive unique categories and projects for filter dropdowns
+  const uniqueCategories = useMemo(() => [...new Set(data.expenses.map(e => e.category))].sort(), [data.expenses]);
+  const uniqueProjects = useMemo(() => [...new Set(data.expenses.map(e => e.projectName))].sort(), [data.expenses]);
+
+  const hasActiveFilters = categoryFilter || projectFilter || typeFilter || dateFrom || dateTo;
+  const clearAllFilters = () => {
+    setCategoryFilter('');
+    setProjectFilter('');
+    setTypeFilter('');
+    setDateFrom('');
+    setDateTo('');
+  };
+
   // Action Menu State
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
@@ -55,10 +76,22 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
     inv.projectName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredExpenses = data.expenses.filter(exp =>
-    exp.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    exp.projectName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredExpenses = data.expenses.filter(exp => {
+    const matchesSearch = !searchTerm ||
+      exp.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      exp.projectName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = !categoryFilter || exp.category === categoryFilter;
+    const matchesProject = !projectFilter || exp.projectName === projectFilter;
+    const matchesType = !typeFilter || exp.type === typeFilter;
+    const matchesDateFrom = !dateFrom || exp.date >= dateFrom;
+    const matchesDateTo = !dateTo || exp.date <= dateTo;
+    return matchesSearch && matchesCategory && matchesProject && matchesType && matchesDateFrom && matchesDateTo;
+  });
+
+  // Dynamic subtotal of currently filtered expenses
+  const expensesSubtotal = useMemo(() =>
+    filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+  , [filteredExpenses]);
 
   const filteredPayables = (data.payableInvoices || []).filter(pay =>
     pay.vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -283,6 +316,113 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
           </button>
         </div>
       </div>
+
+      {/* Expense Filter Bar */}
+      {activeTab === 'expenses' && (
+        <div className="space-y-3">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-bold transition-all ${
+              showFilters || hasActiveFilters
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            Filters
+            {hasActiveFilters && (
+              <span className="bg-white/20 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                {[categoryFilter, projectFilter, typeFilter, dateFrom, dateTo].filter(Boolean).length}
+              </span>
+            )}
+            <ChevronDown className={`w-3 h-3 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showFilters && (
+            <div className="flex flex-wrap gap-3 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl animate-in slide-in-from-top-2 duration-200">
+              {/* Category Filter */}
+              <div className="flex flex-col gap-1 min-w-[160px]">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Category</label>
+                <select
+                  value={categoryFilter}
+                  onChange={e => setCategoryFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50"
+                >
+                  <option value="">All Categories</option>
+                  {uniqueCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
+
+              {/* Project Filter */}
+              <div className="flex flex-col gap-1 min-w-[160px]">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Project</label>
+                <select
+                  value={projectFilter}
+                  onChange={e => setProjectFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50"
+                >
+                  <option value="">All Projects</option>
+                  {uniqueProjects.map(proj => <option key={proj} value={proj}>{proj}</option>)}
+                </select>
+              </div>
+
+              {/* Type Filter */}
+              <div className="flex flex-col gap-1 min-w-[130px]">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Type</label>
+                <select
+                  value={typeFilter}
+                  onChange={e => setTypeFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50"
+                >
+                  <option value="">All Types</option>
+                  <option value="fixed">Fixed</option>
+                  <option value="variable">Variable</option>
+                </select>
+              </div>
+
+              {/* Date From */}
+              <div className="flex flex-col gap-1 min-w-[150px]">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">From</label>
+                <div className="relative">
+                  <Calendar className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={e => setDateFrom(e.target.value)}
+                    className="pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50 w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Date To */}
+              <div className="flex flex-col gap-1 min-w-[150px]">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">To</label>
+                <div className="relative">
+                  <Calendar className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={e => setDateTo(e.target.value)}
+                    className="pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50 w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Clear Filters */}
+              {hasActiveFilters && (
+                <div className="flex items-end">
+                  <button
+                    onClick={clearAllFilters}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-xl text-sm font-bold hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" /> Clear
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="glass-panel rounded-[2rem] overflow-visible shadow-sm border border-slate-100 dark:border-slate-800">
         <table className="w-full text-left border-collapse">
@@ -567,6 +707,39 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
               ))
             )}
           </tbody>
+
+          {/* Expenses Subtotal Footer */}
+          {activeTab === 'expenses' && filteredExpenses.length > 0 && (
+            <tfoot>
+              <tr className="bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 dark:from-indigo-950/40 dark:via-purple-950/30 dark:to-indigo-950/40 border-t-2 border-indigo-200 dark:border-indigo-800">
+                <td className="px-6 py-4" colSpan={3}>
+                  <div className="flex items-center gap-2">
+                    <div className="bg-indigo-600 rounded-lg p-1.5">
+                      <Tag className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <span className="text-sm font-black text-indigo-900 dark:text-indigo-200">
+                      Subtotal
+                    </span>
+                    <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 rounded-full">
+                      {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? 's' : ''}
+                    </span>
+                    {hasActiveFilters && (
+                      <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                        FILTERED
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-6 py-4" colSpan={3}>
+                  <div className="text-right">
+                    <span className="text-lg font-black text-indigo-700 dark:text-indigo-300">
+                      {currencySymbol}{expensesSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </table>
 
         {(activeTab === 'invoices' ? filteredInvoices : activeTab === 'expenses' ? filteredExpenses : activeTab === 'payables' ? filteredPayables : filteredCreditNotes).length === 0 && (
