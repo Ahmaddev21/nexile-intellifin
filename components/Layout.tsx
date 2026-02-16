@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Table2,
   Activity, // New Logo Icon
-  BrainCircuit, // Restored for Nav Menu
   Briefcase,
   PieChart as ReportIcon,
   Settings,
@@ -112,7 +111,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, the
     { id: 'dashboard', label: 'Intelligence', icon: LayoutDashboard },
     { id: 'workspace', label: 'Workspace', icon: Table2 },
     { id: 'projects', label: 'Projects', icon: Briefcase },
-    { id: 'ai-analyst', label: 'AI Analyst', icon: BrainCircuit },
     { id: 'team', label: 'Team Access', icon: User },
     { id: 'reports', label: 'Reports', icon: ReportIcon },
   ];

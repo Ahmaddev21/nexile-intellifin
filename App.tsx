@@ -4,7 +4,6 @@ import Reports from './components/Reports';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Workspace from './components/Workspace';
-import AIChat from './components/AIChat';
 import Projects from './components/Projects';
 import { FinancialData, AIInsight, Company, UserProgress } from './types';
 import { getFinancialInsights } from './services/geminiService';
@@ -442,8 +441,7 @@ const App: React.FC = () => {
             onDataRefresh={refreshData}
           />
         );
-      case 'ai-analyst':
-        return <AIChat data={financialData} />;
+
       case 'projects':
         return <Projects data={financialData} currencySymbol={currencySymbol} onDataRefresh={refreshData} userRole={userRole} />;
       case 'pricing':
