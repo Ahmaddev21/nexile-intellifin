@@ -230,3 +230,16 @@ export interface ProjectCreate {
   costCategories: string[];
   status: 'active' | 'completed' | 'on-hold';
 }
+
+export interface AuditLog {
+  id: string;
+  tableName: string;
+  recordId: string;
+  action: 'INSERT' | 'UPDATE' | 'DELETE';
+  oldData: any;
+  newData: any;
+  performedBy: string;
+  userName: string;
+  timestamp: string;
+  companyId: string;
+}

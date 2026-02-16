@@ -7,7 +7,8 @@ import {
     PayableInvoice,
     CreditNote,
     Company,
-    UserProgress
+    UserProgress,
+    AuditLog
 } from '../types';
 import { supabase } from '../lib/supabase';
 import { calculateProjectFinancials } from '../utils/financialCalculations';
@@ -770,6 +771,49 @@ export const regenerateJoinCode = async () => {
     const { data, error } = await supabase.rpc('regenerate_join_code');
     if (error) throw error;
     return data as string;
+};
+
+// --- Audit Logs ---
+
+export const fetchAuditLogs = async (): Promise<AuditLog[]> => {
+    const companyId = await getCompanyId();
+    if (!companyId) throw new Error('User not authenticated or no company found');
+
+    const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .eq('company_id', companyId)
+        .order('timestamp', { ascending: false });
+
+    if (error) throw error;
+
+    // Fetch all unique user IDs to get usernames
+    const userIds = [...new Set((data || []).map((l: any) => l.performed_by).filter(Boolean))];
+    const profileMap: Record<string, string> = {};
+
+    if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, username')
+            .in('id', userIds);
+
+        (profiles || []).forEach((p: any) => {
+            profileMap[p.id] = p.username || 'Unknown';
+        });
+    }
+
+    return (data || []).map((log: any) => ({
+        id: log.id,
+        tableName: log.table_name,
+        recordId: log.record_id,
+        action: log.action,
+        oldData: log.old_data,
+        newData: log.new_data,
+        performedBy: log.performed_by,
+        userName: profileMap[log.performed_by] || 'Unknown',
+        timestamp: log.timestamp,
+        companyId: log.company_id
+    }));
 };
 
 // --- Storage / Attachments ---
