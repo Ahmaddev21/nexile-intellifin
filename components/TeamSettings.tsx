@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
-import { Users, Copy, RefreshCw, Shield, CheckCircle2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Users, Copy, RefreshCw, Shield, CheckCircle2, ChevronDown, Calendar } from 'lucide-react';
 import { Company } from '../types';
-import { regenerateJoinCode } from '../services/api';
+import { regenerateJoinCode, updateCompany } from '../services/api';
+
+const MONTHS = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+];
 
 interface TeamSettingsProps {
     company: Company;
@@ -12,6 +17,20 @@ interface TeamSettingsProps {
 const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
+    const [isSavingMonth, setIsSavingMonth] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setMonthDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleCopy = () => {
         if (company.joinCode) {
@@ -29,7 +48,6 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
         setIsLoading(true);
         try {
             await regenerateJoinCode();
-            // Notify parent to refresh company data
             onUpdate();
             alert('New Team Code generated successfully!');
         } catch (error: any) {
@@ -38,6 +56,32 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
             setIsLoading(false);
         }
     };
+
+    const handleFiscalYearChange = async (month: string) => {
+        if (month === company.fiscalYearStart) {
+            setMonthDropdownOpen(false);
+            return;
+        }
+
+        setIsSavingMonth(true);
+        try {
+            await updateCompany({
+                name: company.name,
+                industry: company.industry,
+                currency: company.currency,
+                fiscalYearStart: month
+            });
+            onUpdate();
+        } catch (error: any) {
+            alert('Failed to update fiscal year: ' + error.message);
+        } finally {
+            setIsSavingMonth(false);
+            setMonthDropdownOpen(false);
+        }
+    };
+
+    const currentYear = new Date().getFullYear();
+    const fiscalYearDisplay = `${currentYear}, ${company.fiscalYearStart || 'January'}`;
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -117,9 +161,51 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
                             <span className="text-slate-500 dark:text-slate-400 font-medium">Currency</span>
                             <span className="font-bold text-slate-900 dark:text-white">{company.currency}</span>
                         </div>
-                        <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
+
+                        {/* Fiscal Year Start - Editable for Admin */}
+                        <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl relative" ref={dropdownRef}>
                             <span className="text-slate-500 dark:text-slate-400 font-medium">Fiscal Year Start</span>
-                            <span className="font-bold text-slate-900 dark:text-white">{company.fiscalYearStart}</span>
+
+                            {userRole === 'admin' ? (
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setMonthDropdownOpen(!monthDropdownOpen)}
+                                        disabled={isSavingMonth}
+                                        className="flex items-center gap-2 font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 px-4 py-2 rounded-xl transition-all cursor-pointer group"
+                                    >
+                                        <Calendar className="w-4 h-4 text-indigo-500" />
+                                        {isSavingMonth ? 'Saving...' : fiscalYearDisplay}
+                                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${monthDropdownOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {monthDropdownOpen && (
+                                        <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl dark:shadow-none z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <div className="p-2 max-h-64 overflow-y-auto">
+                                                {MONTHS.map((month) => (
+                                                    <button
+                                                        key={month}
+                                                        onClick={() => handleFiscalYearChange(month)}
+                                                        className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                                                            company.fiscalYearStart === month
+                                                                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+                                                                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                                                        }`}
+                                                    >
+                                                        <span className="flex items-center justify-between">
+                                                            {currentYear}, {month}
+                                                            {company.fiscalYearStart === month && (
+                                                                <CheckCircle2 className="w-4 h-4 text-indigo-500" />
+                                                            )}
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <span className="font-bold text-slate-900 dark:text-white">{fiscalYearDisplay}</span>
+                            )}
                         </div>
                     </div>
                 </div>
