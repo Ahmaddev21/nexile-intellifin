@@ -30,7 +30,7 @@ begin
     return;
   end if;
 
-  -- Return leaderboard (all company members)
+  -- Return leaderboard (team members only — admin excluded)
   return query
   select 
     p.id as user_id,
@@ -42,6 +42,7 @@ begin
   inner join auth.users u on u.id = p.id
   inner join public.company_users cu2 on cu2.user_id = p.id
   where cu2.company_id = v_company_id
+    and cu2.role = 'member'
   order by coalesce(p.points, 0) desc
   limit 50;
 end;
