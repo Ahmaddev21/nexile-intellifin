@@ -19,9 +19,9 @@ declare
   v_company_id uuid;
 begin
   -- Get the company ID for the current user
-  select company_id into v_company_id
-  from public.company_users
-  where user_id = auth.uid()
+  select cu.company_id into v_company_id
+  from public.company_users cu
+  where cu.user_id = auth.uid()
   limit 1;
 
   -- If no company found (shouldn't happen for active users), return empty
@@ -29,19 +29,19 @@ begin
     return;
   end if;
 
-  -- Return leaderboard
+  -- Return leaderboard (all company members)
   return query
   select 
     p.id as user_id,
     coalesce(p.username, u.email, 'Unknown User') as username,
     coalesce(p.points, 0) as points,
     coalesce(p.level, 1) as level,
-    rank() over (order by coalesce(p.points, 0) desc) as rank
+    row_number() over (order by coalesce(p.points, 0) desc) as rank
   from public.profiles p
-  join auth.users u on p.id = u.id
-  join public.company_users cu on p.id = cu.user_id
-  where cu.company_id = v_company_id
-  order by points desc
+  inner join auth.users u on u.id = p.id
+  inner join public.company_users cu2 on cu2.user_id = p.id
+  where cu2.company_id = v_company_id
+  order by coalesce(p.points, 0) desc
   limit 50;
 end;
 $$ language plpgsql security definer;
