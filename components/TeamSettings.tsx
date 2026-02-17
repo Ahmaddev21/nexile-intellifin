@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Copy, RefreshCw, Shield, CheckCircle2, ChevronDown, Calendar, UserPlus, Loader2 } from 'lucide-react';
+import { Users, Copy, RefreshCw, Shield, CheckCircle2, ChevronDown, Calendar, UserPlus, Loader2, AlertCircle, X } from 'lucide-react';
 import { Company } from '../types';
 import { regenerateJoinCode, updateCompany } from '../services/api';
 import { supabase } from '../lib/supabase';
@@ -23,6 +23,7 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
     const [teamInfo, setTeamInfo] = useState<{ current_count: number; seat_limit: number; seats_available: number } | null>(null);
     const [isLoadingTeamInfo, setIsLoadingTeamInfo] = useState(false);
     const [isBuyingSeat, setIsBuyingSeat] = useState(false);
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown when clicking outside
@@ -35,6 +36,14 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Auto-dismiss toast
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast]);
 
     // Fetch team seat info
     useEffect(() => {
@@ -70,9 +79,9 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
         try {
             await regenerateJoinCode();
             onUpdate();
-            alert('New Team Code generated successfully!');
+            setToast({ message: 'New Team Code generated successfully!', type: 'success' });
         } catch (error: any) {
-            alert('Failed to regenerate code: ' + error.message);
+            setToast({ message: 'Failed to regenerate code: ' + error.message, type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -94,7 +103,7 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
             });
             onUpdate();
         } catch (error: any) {
-            alert('Failed to update fiscal year: ' + error.message);
+            setToast({ message: 'Failed to update fiscal year: ' + error.message, type: 'error' });
         } finally {
             setIsSavingMonth(false);
             setMonthDropdownOpen(false);
@@ -122,7 +131,7 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
             if (data?.url) window.location.href = data.url;
             else throw new Error('No checkout URL returned');
         } catch (err: any) {
-            alert('Failed to start checkout: ' + err.message);
+            setToast({ message: 'Failed to start checkout: ' + err.message, type: 'error' });
         } finally {
             setIsBuyingSeat(false);
         }
@@ -198,7 +207,7 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
                 )}
 
                 {/* Workspace Info Card */}
-                <div className="glass-panel p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                <div className="glass-panel p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 relative z-10" style={{ overflow: 'visible' }}>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Workspace Details</h3>
                     <div className="space-y-4">
                         <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
@@ -326,6 +335,29 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
                     )}
                 </div>
             </div>
+
+            {/* Toast Notification */}
+            {toast && (
+                <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-bottom-4 fade-in duration-300">
+                    <div className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border backdrop-blur-xl max-w-md ${
+                        toast.type === 'error'
+                            ? 'bg-rose-50 dark:bg-rose-950/90 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+                            : 'bg-emerald-50 dark:bg-emerald-950/90 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
+                    }`}>
+                        {toast.type === 'error'
+                            ? <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                            : <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                        }
+                        <span className="text-sm font-bold">{toast.message}</span>
+                        <button
+                            onClick={() => setToast(null)}
+                            className="ml-2 p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-shrink-0"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

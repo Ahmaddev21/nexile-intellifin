@@ -40,7 +40,6 @@ const Pricing: React.FC<PricingProps> = ({ companyId, currentUserId, onUpgradeSu
             features: [
                 'Unlimited Invoices & Expenses',
                 'Financial Reports & Analytics',
-                'AI Financial Analyst',
                 'Multi-User Access (up to 5)',
                 'Priority Support',
                 'Documentation System (File Upload)',
