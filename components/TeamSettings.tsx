@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Copy, RefreshCw, Shield, CheckCircle2, ChevronDown, Calendar } from 'lucide-react';
+import { Users, Copy, RefreshCw, Shield, CheckCircle2, ChevronDown, Calendar, UserPlus, Loader2 } from 'lucide-react';
 import { Company } from '../types';
 import { regenerateJoinCode, updateCompany } from '../services/api';
+import { supabase } from '../lib/supabase';
 
 const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -19,6 +20,9 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
     const [copied, setCopied] = useState(false);
     const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
     const [isSavingMonth, setIsSavingMonth] = useState(false);
+    const [teamInfo, setTeamInfo] = useState<{ current_count: number; seat_limit: number; seats_available: number } | null>(null);
+    const [isLoadingTeamInfo, setIsLoadingTeamInfo] = useState(false);
+    const [isBuyingSeat, setIsBuyingSeat] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown when clicking outside
@@ -31,6 +35,23 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Fetch team seat info
+    useEffect(() => {
+        const fetchTeamInfo = async () => {
+            if (!company.id) return;
+            setIsLoadingTeamInfo(true);
+            try {
+                const { data } = await supabase.rpc('get_team_info', { p_company_id: company.id });
+                if (data && !data.error) setTeamInfo(data);
+            } catch (_e) {
+                // silently fail
+            } finally {
+                setIsLoadingTeamInfo(false);
+            }
+        };
+        fetchTeamInfo();
+    }, [company.id]);
 
     const handleCopy = () => {
         if (company.joinCode) {
@@ -77,6 +98,33 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
         } finally {
             setIsSavingMonth(false);
             setMonthDropdownOpen(false);
+        }
+    };
+
+    const handleBuyAddonSeat = async () => {
+        if (!company.id) return;
+        setIsBuyingSeat(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Not authenticated');
+
+            const currency = company.currency === 'QAR' ? 'QAR' : 'USD';
+            const { data, error } = await supabase.functions.invoke('create-checkout', {
+                body: {
+                    plan_type: 'addon',
+                    currency,
+                    company_id: company.id,
+                    user_id: user.id,
+                    return_url: window.location.origin,
+                },
+            });
+            if (error) throw error;
+            if (data?.url) window.location.href = data.url;
+            else throw new Error('No checkout URL returned');
+        } catch (err: any) {
+            alert('Failed to start checkout: ' + err.message);
+        } finally {
+            setIsBuyingSeat(false);
         }
     };
 
@@ -208,6 +256,74 @@ const TeamSettings: React.FC<TeamSettingsProps> = ({ company, onUpdate, userRole
                             )}
                         </div>
                     </div>
+                </div>
+
+                {/* Team Capacity Card */}
+                <div className="glass-panel p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 lg:col-span-2">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded-2xl flex items-center justify-center">
+                            <Users className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Team Capacity</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Manage your team member seats</p>
+                        </div>
+                    </div>
+
+                    {isLoadingTeamInfo ? (
+                        <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+                        </div>
+                    ) : teamInfo ? (
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <span className="text-slate-500 dark:text-slate-400 font-medium">Members</span>
+                                <span className="font-bold text-slate-900 dark:text-white text-lg">
+                                    {teamInfo.current_count} / {teamInfo.seat_limit}
+                                </span>
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                        teamInfo.seats_available <= 0
+                                            ? 'bg-rose-500'
+                                            : teamInfo.seats_available <= 1
+                                                ? 'bg-amber-500'
+                                                : 'bg-emerald-500'
+                                    }`}
+                                    style={{ width: `${Math.min((teamInfo.current_count / teamInfo.seat_limit) * 100, 100)}%` }}
+                                />
+                            </div>
+
+                            <div className="flex justify-between items-center text-sm">
+                                <span className={`font-bold ${
+                                    teamInfo.seats_available <= 0 ? 'text-rose-500' : 'text-emerald-500'
+                                }`}>
+                                    {teamInfo.seats_available > 0
+                                        ? `${teamInfo.seats_available} seat${teamInfo.seats_available !== 1 ? 's' : ''} available`
+                                        : 'No seats available'}
+                                </span>
+
+                                {userRole === 'admin' && teamInfo.seats_available <= 1 && (
+                                    <button
+                                        onClick={handleBuyAddonSeat}
+                                        disabled={isBuyingSeat}
+                                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold text-sm transition-colors"
+                                    >
+                                        {isBuyingSeat ? (
+                                            <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+                                        ) : (
+                                            <><UserPlus className="w-4 h-4" /> Add More Seats ({company.currency === 'QAR' ? '99 QAR' : '$27'}/seat)</>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-slate-400 dark:text-slate-500 text-sm">Unable to load team info.</p>
+                    )}
                 </div>
             </div>
         </div>

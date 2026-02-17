@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, Loader2, Shield, Globe, CreditCard } from 'lucide-react';
+import { Check, Loader2, Shield, CreditCard, X, Star, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface PricingProps {
@@ -9,41 +9,59 @@ interface PricingProps {
 }
 
 const Pricing: React.FC<PricingProps> = ({ companyId, currentUserId, onUpgradeSuccess }) => {
-    const [billingCycle, setBillingCycle] = useState<'annual'>('annual');
     const [currency, setCurrency] = useState<'USD' | 'QAR'>('USD');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState<string | null>(null);
 
     const plans = [
         {
-            id: 'pro_annual',
-            name: 'Pro Annual',
-            price: currency === 'QAR' ? 499 : 139, // Approx USD conversion
+            id: 'basic',
+            name: 'Basic',
+            price: currency === 'QAR' ? 499 : 137,
             currency: currency,
+            description: 'Essential financial tools for small teams',
             features: [
                 'Unlimited Invoices & Expenses',
-                'Advanced Financial Reports',
+                'Financial Reports & Analytics',
                 'AI Financial Analyst',
-                'Multi-User Access',
+                'Multi-User Access (up to 5)',
                 'Priority Support',
-                'Secure Document Storage'
             ],
-            recommended: true
-        }
+            excluded: [
+                'Documentation System (File Upload)',
+            ],
+            recommended: false,
+        },
+        {
+            id: 'pro',
+            name: 'Pro',
+            price: currency === 'QAR' ? 599 : 165,
+            currency: currency,
+            description: 'Complete suite with document management',
+            features: [
+                'Unlimited Invoices & Expenses',
+                'Financial Reports & Analytics',
+                'AI Financial Analyst',
+                'Multi-User Access (up to 5)',
+                'Priority Support',
+                'Documentation System (File Upload)',
+            ],
+            excluded: [],
+            recommended: true,
+        },
     ];
 
-    const handleUpgrade = async (plan: any) => {
+    const handleUpgrade = async (planType: string) => {
         try {
-            setIsLoading(true);
+            setIsLoading(planType);
 
-            // Call Edge Function to create checkout session
             const { data, error } = await supabase.functions.invoke('create-checkout', {
                 body: {
-                    price_id: plan.id,
+                    plan_type: planType,
                     currency: currency,
                     company_id: companyId,
                     user_id: currentUserId,
-                    return_url: window.location.origin
-                }
+                    return_url: window.location.origin,
+                },
             });
 
             if (error) throw error;
@@ -53,23 +71,21 @@ const Pricing: React.FC<PricingProps> = ({ companyId, currentUserId, onUpgradeSu
             } else {
                 throw new Error('No checkout URL returned');
             }
-
         } catch (err: any) {
             console.error('Checkout failed:', err);
             alert('Failed to start checkout: ' + err.message);
         } finally {
-            setIsLoading(false);
+            setIsLoading(null);
         }
     };
 
     return (
         <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-white">
-            <div className="max-w-4xl w-full">
+            <div className="max-w-5xl w-full">
                 <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold mb-4">Upgrade to Pro</h1>
+                    <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
                     <p className="text-slate-400 max-w-2xl mx-auto">
-                        Unlock the full potential of Intellifin with our comprehensive financial suite.
-                        Secure, intelligent, and designed for growth.
+                        Unlock the full potential of Intellifin. Annual billing — secure, intelligent, and designed for growth.
                     </p>
                 </div>
 
@@ -91,16 +107,25 @@ const Pricing: React.FC<PricingProps> = ({ companyId, currentUserId, onUpgradeSu
                     </div>
                 </div>
 
-                <div className="grid md:grid-cols-1 gap-8 max-w-md mx-auto">
+                <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                     {plans.map((plan) => (
-                        <div key={plan.id} className="relative bg-slate-800 rounded-3xl p-8 border border-indigo-500/30 shadow-2xl shadow-indigo-900/20 overflow-hidden transform hover:scale-105 transition-all duration-300">
+                        <div
+                            key={plan.id}
+                            className={`relative bg-slate-800 rounded-3xl p-8 border overflow-hidden transform hover:scale-105 transition-all duration-300 ${
+                                plan.recommended
+                                    ? 'border-indigo-500/50 shadow-2xl shadow-indigo-900/30'
+                                    : 'border-slate-700/50 shadow-xl shadow-slate-900/20'
+                            }`}
+                        >
                             {plan.recommended && (
-                                <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
-                                    Recommended
+                                <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider flex items-center gap-1">
+                                    <Star className="w-3 h-3" /> Recommended
                                 </div>
                             )}
 
-                            <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
+                            <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
+                            <p className="text-slate-400 text-sm mb-4">{plan.description}</p>
+
                             <div className="flex items-baseline gap-1 mb-6">
                                 <span className="text-4xl font-bold text-white">
                                     {plan.currency === 'USD' ? '$' : 'QAR '}{plan.price}
@@ -108,7 +133,7 @@ const Pricing: React.FC<PricingProps> = ({ companyId, currentUserId, onUpgradeSu
                                 <span className="text-slate-400">/year</span>
                             </div>
 
-                            <ul className="space-y-4 mb-8">
+                            <ul className="space-y-3 mb-6">
                                 {plan.features.map((feature, i) => (
                                     <li key={i} className="flex items-center gap-3 text-slate-300">
                                         <div className="w-5 h-5 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0">
@@ -117,20 +142,32 @@ const Pricing: React.FC<PricingProps> = ({ companyId, currentUserId, onUpgradeSu
                                         {feature}
                                     </li>
                                 ))}
+                                {plan.excluded.map((feature, i) => (
+                                    <li key={`ex-${i}`} className="flex items-center gap-3 text-slate-500">
+                                        <div className="w-5 h-5 bg-slate-700/50 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <X className="w-3 h-3 text-slate-600" />
+                                        </div>
+                                        <span className="line-through">{feature}</span>
+                                    </li>
+                                ))}
                             </ul>
 
                             <button
-                                onClick={() => handleUpgrade(plan)}
-                                disabled={isLoading}
-                                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
+                                onClick={() => handleUpgrade(plan.id)}
+                                disabled={isLoading !== null}
+                                className={`w-full py-4 font-bold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 ${
+                                    plan.recommended
+                                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20'
+                                        : 'bg-slate-700 hover:bg-slate-600 text-white shadow-slate-700/20'
+                                }`}
                             >
-                                {isLoading ? (
+                                {isLoading === plan.id ? (
                                     <>
                                         <Loader2 className="w-5 h-5 animate-spin" /> Processing...
                                     </>
                                 ) : (
                                     <>
-                                        Upgrade Now <CreditCard className="w-4 h-4" />
+                                        Get {plan.name} <CreditCard className="w-4 h-4" />
                                     </>
                                 )}
                             </button>
@@ -140,6 +177,11 @@ const Pricing: React.FC<PricingProps> = ({ companyId, currentUserId, onUpgradeSu
                             </p>
                         </div>
                     ))}
+                </div>
+
+                {/* Add-on info */}
+                <div className="text-center mt-8 text-slate-500 text-sm">
+                    <p>Both plans include up to 5 team members. Additional seats available for {currency === 'QAR' ? '99 QAR' : '$27'}/seat/year.</p>
                 </div>
             </div>
         </div>

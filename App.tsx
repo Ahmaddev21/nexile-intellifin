@@ -52,7 +52,7 @@ const App: React.FC = () => {
     fiscalYearStart: 'January'
   });
 
-  const { subscription, isLoading: isSubscriptionLoading, isActive: isSubscriptionActive, refetch: refetchSubscription } = useSubscription(company.id);
+  const { subscription, isLoading: isSubscriptionLoading, isActive: isSubscriptionActive, isPro: isSubscriptionPro, refetch: refetchSubscription } = useSubscription(company.id);
 
   // Flag to prevent loadInitialData from overriding handleLogin's state
   const loginJustCompleted = useRef(false);
@@ -429,6 +429,7 @@ const App: React.FC = () => {
             company={company}
             userRole={userRole}
             currencySymbol={currencySymbol}
+            isPro={isSubscriptionPro()}
             onCategorize={handleCategorizeExpense}
             onAddInvoice={() => { setModalType('invoice'); setEditingTransaction(null); setIsModalOpen(true); }}
             onAddExpense={() => { setModalType('expense'); setEditingTransaction(null); setIsModalOpen(true); }}

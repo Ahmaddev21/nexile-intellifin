@@ -5,6 +5,7 @@ export interface Subscription {
     id: string;
     status: 'active' | 'past_due' | 'canceled' | 'trial' | 'expired';
     plan_id: string;
+    plan_type: 'basic' | 'pro';
     current_period_end: string;
     currency: string;
 }
@@ -16,7 +17,6 @@ export const useSubscription = (companyId?: string) => {
     const prevCompanyId = useRef(companyId);
 
     // When companyId changes, immediately set loading to true
-    // This prevents the enforcement useEffect from firing with stale data
     if (companyId !== prevCompanyId.current) {
         prevCompanyId.current = companyId;
         if (companyId) {
@@ -65,5 +65,11 @@ export const useSubscription = (companyId?: string) => {
         return isStatusActive && notExpired;
     };
 
-    return { subscription, isLoading, error, isActive, refetch: fetchSubscription };
+    // Helper to check if Pro plan
+    const isPro = () => {
+        if (!subscription) return false;
+        return isActive() && subscription.plan_type === 'pro';
+    };
+
+    return { subscription, isLoading, error, isActive, isPro, refetch: fetchSubscription };
 };

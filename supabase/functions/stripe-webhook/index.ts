@@ -34,33 +34,58 @@ serve(async (req) => {
     // Handle the event
     if (event.type === "checkout.session.completed") {
         const session = event.data.object;
-        const { company_id, plan, user_id: _user_id } = session.metadata || {};
+        const { company_id, plan_type, plan, user_id: _user_id } = session.metadata || {};
 
-        if (company_id) {
-            // Calculate Access Period (1 Year)
-            const startDate = new Date();
-            const endDate = new Date();
-            endDate.setFullYear(endDate.getFullYear() + 1);
+        if (!company_id) {
+            console.error("Missing company_id in metadata");
+            return new Response("Missing company_id", { status: 400 });
+        }
 
-            // Upsert Subscription
+        // Calculate 1 year access period
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setFullYear(endDate.getFullYear() + 1);
+
+        // Handle add-on seat purchase
+        if (plan_type === 'addon') {
             const { error } = await supabase
-                .from('subscriptions')
-                .upsert({
+                .from('team_addons')
+                .insert({
                     company_id: company_id,
-                    plan_id: plan || 'pro_annual',
+                    additional_seats: 1,
                     status: 'active',
-                    current_period_start: startDate.toISOString(),
-                    current_period_end: endDate.toISOString(),
-                    currency: 'USD',
-                    amount_paid: session.amount_total ? session.amount_total / 100 : 0,
+                    expires_at: endDate.toISOString(),
                     payment_gateway: 'stripe',
-                    stripe_subscription_id: session.payment_intent as string // Using PaymentIntent ID as ref for one-time
-                }, { onConflict: 'company_id' });
+                    payment_id: session.payment_intent as string,
+                });
 
             if (error) {
-                console.error('Database Update Failed:', error);
+                console.error('team_addons insert failed:', error);
                 return new Response("Database Update Failed", { status: 500 });
             }
+
+            return new Response("Addon Activated", { status: 200 });
+        }
+
+        // Handle subscription purchase (basic or pro)
+        const { error } = await supabase
+            .from('subscriptions')
+            .upsert({
+                company_id: company_id,
+                plan_id: plan || `${plan_type}_annual`,
+                plan_type: plan_type || 'pro',
+                status: 'active',
+                current_period_start: startDate.toISOString(),
+                current_period_end: endDate.toISOString(),
+                currency: 'USD',
+                amount_paid: session.amount_total ? session.amount_total / 100 : 0,
+                payment_gateway: 'stripe',
+                stripe_subscription_id: session.payment_intent as string,
+            }, { onConflict: 'company_id' });
+
+        if (error) {
+            console.error('Database Update Failed:', error);
+            return new Response("Database Update Failed", { status: 500 });
         }
     }
 

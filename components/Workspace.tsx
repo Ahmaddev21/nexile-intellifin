@@ -11,6 +11,7 @@ interface WorkspaceProps {
   company: Company;
   currencySymbol: string;
   userRole: 'admin' | 'member';
+  isPro?: boolean;
   onCategorize?: (expenseId: string, event: React.MouseEvent) => void;
   onAddInvoice: () => void;
   onAddExpense: () => void;
@@ -23,7 +24,7 @@ interface WorkspaceProps {
   onDataRefresh: () => void;
 }
 
-const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, userRole, onCategorize, onAddInvoice, onAddExpense, onAddPayable, onAddCreditNote, onEditInvoice, onEditExpense, onEditPayable, onEditCreditNote, onDataRefresh }) => {
+const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, userRole, isPro = true, onCategorize, onAddInvoice, onAddExpense, onAddPayable, onAddCreditNote, onEditInvoice, onEditExpense, onEditPayable, onEditCreditNote, onDataRefresh }) => {
   const [activeTab, setActiveTab] = useState<'invoices' | 'expenses' | 'payables' | 'credit_notes'>('invoices');
   const [searchTerm, setSearchTerm] = useState('');
   const [categorizedIds, setCategorizedIds] = useState<Set<string>>(new Set());
@@ -249,19 +250,28 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
     setAttachmentModal(prev => ({ ...prev, currentUrl: url || undefined }));
   };
 
-  // Helper to render attachment button
-  const AttachmentButton = ({ record, type }: { record: any, type: 'invoices' | 'expenses' | 'payable_invoices' | 'credit_notes' }) => (
-    <button
-      onClick={() => openAttachmentModal(record, type)}
-      className={`p-2 transition-all rounded-xl mr-1 ${record.attachment_url
-        ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
-        : 'text-slate-300 dark:text-slate-600 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800'
-        }`}
-      title={record.attachment_url ? "View Attached Document" : "Upload Document"}
-    >
-      {record.attachment_url ? <CheckCircle2 className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
-    </button>
-  );
+  // Helper to render attachment button (Pro plan only)
+  const AttachmentButton = ({ record, type }: { record: any, type: 'invoices' | 'expenses' | 'payable_invoices' | 'credit_notes' }) => {
+    if (!isPro) {
+      return (
+        <span className="p-2 mr-1 text-slate-300 dark:text-slate-700 cursor-not-allowed" title="Upgrade to Pro to use Document System">
+          <FileText className="w-5 h-5" />
+        </span>
+      );
+    }
+    return (
+      <button
+        onClick={() => openAttachmentModal(record, type)}
+        className={`p-2 transition-all rounded-xl mr-1 ${record.attachment_url
+          ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
+          : 'text-slate-300 dark:text-slate-600 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        title={record.attachment_url ? "View Attached Document" : "Upload Document"}
+      >
+        {record.attachment_url ? <CheckCircle2 className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+      </button>
+    );
+  };
 
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">

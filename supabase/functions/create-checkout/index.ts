@@ -6,13 +6,18 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
     httpClient: Stripe.createFetchHttpClient(),
 });
 
-const MYFATOORAH_API_URL = Deno.env.get("MYFATOORAH_TEST_MODE") === "true"
-    ? "https://apitest.myfatoorah.com"
-    : "https://api.myfatoorah.com";
+const MYFATOORAH_API_URL = "https://api.myfatoorah.com"; // Production only
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Pricing configuration
+const PRICING = {
+    basic_annual: { qar: 499, usd: 13700, label: "Intellifin Basic Annual" }, // $137.00
+    pro_annual:   { qar: 599, usd: 16500, label: "Intellifin Pro Annual" },   // $165.00
+    addon_seat:   { qar: 99,  usd: 2700,  label: "Additional Team Seat" },    // $27.00
 };
 
 serve(async (req) => {
@@ -21,14 +26,28 @@ serve(async (req) => {
     }
 
     try {
-        const { price_id: _price_id, _currency, company_id, user_id, return_url } = await req.json();
+        const { company_id, user_id, return_url, plan_type, currency } = await req.json();
 
         if (!company_id || !user_id) {
             throw new Error("Missing company_id or user_id");
         }
 
+        if (!plan_type || !['basic', 'pro', 'addon'].includes(plan_type)) {
+            throw new Error("Invalid plan_type. Must be 'basic', 'pro', or 'addon'");
+        }
+
+        // Map plan_type to pricing key
+        const priceKey = plan_type === 'addon' ? 'addon_seat' : `${plan_type}_annual`;
+        const pricing = PRICING[priceKey as keyof typeof PRICING];
+
+        if (!pricing) {
+            throw new Error("Invalid pricing configuration");
+        }
+
+        const planId = plan_type === 'addon' ? 'addon_seat' : `${plan_type}_annual`;
+
         // STRIPE (USD)
-        if (_currency === "USD") {
+        if (currency === "USD") {
             const session = await stripe.checkout.sessions.create({
                 payment_method_types: ["card"],
                 line_items: [
@@ -36,22 +55,25 @@ serve(async (req) => {
                         price_data: {
                             currency: "usd",
                             product_data: {
-                                name: "Intellifin Pro Annual",
-                                description: "1 Year License for Intellifin Financial Suite",
+                                name: pricing.label,
+                                description: plan_type === 'addon'
+                                    ? "Add 1 additional team member seat (annual)"
+                                    : `1 Year License — ${plan_type === 'pro' ? 'Pro' : 'Basic'} Plan`,
                             },
-                            unit_amount: 13900, // $139.00
+                            unit_amount: pricing.usd,
                         },
                         quantity: 1,
                     },
                 ],
-                mode: "payment", // Using payment mode for simplicity (can be 'subscription' if recurring)
+                mode: "payment",
                 success_url: `${return_url}?success=true&session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${return_url}?canceled=true`,
                 client_reference_id: company_id,
                 metadata: {
                     company_id,
                     user_id,
-                    plan: "pro_annual"
+                    plan_type,
+                    plan: planId,
                 },
             });
 
@@ -61,20 +83,19 @@ serve(async (req) => {
         }
 
         // MYFATOORAH (QAR)
-        if (_currency === "QAR") {
+        if (currency === "QAR") {
             const token = Deno.env.get("MYFATOORAH_TOKEN");
             if (!token) throw new Error("MyFatoorah Token missing");
 
-            // ExecutePayment Payload
             const payload = {
-                PaymentMethodId: 2, // Visa/MasterCard usually 2, depending on region config
-                InvoiceValue: 499,
+                PaymentMethodId: 2,
+                InvoiceValue: pricing.qar,
                 DisplayCurrencyIso: "QAR",
                 CallBackUrl: `${return_url}?success=true&gateway=myfatoorah`,
                 ErrorUrl: `${return_url}?canceled=true&gateway=myfatoorah`,
-                CustomerName: "Intellifin Customer", // In real app, fetch company name
+                CustomerName: "Intellifin Customer",
                 CustomerReference: company_id,
-                UserDefinedField: JSON.stringify({ company_id, user_id, plan: 'pro_annual' }),
+                UserDefinedField: JSON.stringify({ company_id, user_id, plan_type, plan: planId }),
             };
 
             const resp = await fetch(`${MYFATOORAH_API_URL}/v2/ExecutePayment`, {
@@ -97,7 +118,7 @@ serve(async (req) => {
             });
         }
 
-        throw new Error("Unsupported currency");
+        throw new Error("Unsupported currency. Use 'USD' or 'QAR'.");
 
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "Unknown error";
