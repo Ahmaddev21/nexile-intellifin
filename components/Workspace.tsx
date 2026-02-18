@@ -52,10 +52,27 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
 
   // Action Menu State
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [menuOpenUpward, setMenuOpenUpward] = useState(false);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [optimisticUpdates, setOptimisticUpdates] = useState<Record<string, string>>({});
   const [viewingDocument, setViewingDocument] = useState<{ record: any, type: 'invoice' | 'expense' | 'payable' | 'credit_note' } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const toggleMenu = (id: string, e: React.MouseEvent) => {
+    if (activeMenuId === id) {
+      setActiveMenuId(null);
+    } else {
+      // Check if button is near bottom of viewport
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setMenuOpenUpward(spaceBelow < 350);
+      setActiveMenuId(id);
+    }
+  };
+
+  const menuPositionClass = menuOpenUpward
+    ? 'absolute right-6 bottom-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-bottom-right'
+    : 'absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right';
 
   // Clear optimistic updates when real data arrives
   useEffect(() => {
@@ -484,7 +501,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                   <td className="px-6 py-4 text-right relative flex justify-end items-center gap-2">
                     <AttachmentButton record={inv} type="invoices" />
                     <button
-                      onClick={() => setActiveMenuId(activeMenuId === inv.id ? null : inv.id)}
+                      onClick={(e) => toggleMenu(inv.id, e)}
                       className={`transition-all p-2 rounded-xl ${activeMenuId === inv.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                     >
                       <MoreVertical className="w-5 h-5" />
@@ -493,7 +510,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                     {activeMenuId === inv.id && (
                       <div
                         ref={menuRef}
-                        className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
+                        className={menuPositionClass}
                       >
                         <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Change Status</div>
                         <div className="grid grid-cols-1 gap-1">
@@ -544,7 +561,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                   <td className="px-6 py-4 text-right relative flex justify-end items-center gap-2">
                     <AttachmentButton record={exp} type="expenses" />
                     <button
-                      onClick={() => setActiveMenuId(activeMenuId === exp.id ? null : exp.id)}
+                      onClick={(e) => toggleMenu(exp.id, e)}
                       className={`transition-all p-2 rounded-xl ${activeMenuId === exp.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                     >
                       <MoreVertical className="w-5 h-5" />
@@ -552,7 +569,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                     {activeMenuId === exp.id && (
                       <div
                         ref={menuRef}
-                        className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
+                        className={menuPositionClass}
                       >
                         <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Actions</div>
                         <div className="grid grid-cols-1 gap-1">
@@ -625,7 +642,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                   <td className="px-6 py-4 text-right relative flex justify-end items-center gap-2">
                     <AttachmentButton record={pay} type="payable_invoices" />
                     <button
-                      onClick={() => setActiveMenuId(activeMenuId === pay.id ? null : pay.id)}
+                      onClick={(e) => toggleMenu(pay.id, e)}
                       className="text-slate-300 dark:text-slate-600 hover:text-indigo-600 transition-colors p-1"
                     >
                       <MoreVertical className="w-5 h-5" />
@@ -633,7 +650,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                     {activeMenuId === pay.id && (
                       <div
                         ref={menuRef}
-                        className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
+                        className={menuPositionClass}
                       >
                         <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Actions</div>
                         <div className="grid grid-cols-1 gap-1">
@@ -685,7 +702,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                   <td className="px-6 py-4 text-right relative flex justify-end items-center gap-2">
                     <AttachmentButton record={cn} type="credit_notes" />
                     <button
-                      onClick={() => setActiveMenuId(activeMenuId === cn.id ? null : cn.id)}
+                      onClick={(e) => toggleMenu(cn.id, e)}
                       className="text-slate-300 dark:text-slate-600 hover:text-indigo-600 transition-colors p-1"
                     >
                       <MoreVertical className="w-5 h-5" />
@@ -693,7 +710,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ data, company, currencySymbol, us
                     {activeMenuId === cn.id && (
                       <div
                         ref={menuRef}
-                        className="absolute right-6 top-14 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
+                        className={menuPositionClass}
                       >
                         <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">Actions</div>
                         <div className="grid grid-cols-1 gap-1">
