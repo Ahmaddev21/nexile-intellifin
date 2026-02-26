@@ -1,5 +1,5 @@
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Expense } from '../types';
 
 export const downloadExpenseSummaryPDF = (
@@ -28,7 +28,7 @@ export const downloadExpenseSummaryPDF = (
     ]);
 
     // Apply autoTable
-    (doc as any).autoTable({
+    autoTable(doc, {
         startY: 54,
         head: [['Category', 'Total Amount']],
         body: tableData,
