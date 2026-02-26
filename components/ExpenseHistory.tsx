@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Filter, Loader2, Download } from 'lucide-react';
 import { Expense } from '../types';
 import { fetchFilteredExpenses, fetchExpenseSummary } from '../services/api';
-import { downloadExpenseSummaryCSV } from '../utils/exportUtils';
+import { downloadExpenseSummaryPDF } from '../utils/exportUtils';
 
 interface ExpenseHistoryProps {
     companyName?: string;
@@ -42,7 +42,7 @@ const ExpenseHistory: React.FC<ExpenseHistoryProps> = ({ companyName = 'Company'
     const handleDownloadSummary = () => {
         const dateRangeStr = `${startDate || 'Beginning'} to ${endDate || 'Now'}`;
         const generationDate = new Date().toISOString().split('T')[0];
-        downloadExpenseSummaryCSV(
+        downloadExpenseSummaryPDF(
             companyName,
             dateRangeStr,
             generationDate,
@@ -118,7 +118,7 @@ const ExpenseHistory: React.FC<ExpenseHistoryProps> = ({ companyName = 'Company'
                                 onClick={handleDownloadSummary}
                                 disabled={expenseSummary.length === 0 || isExpenseLoading}
                                 className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg transition-colors disabled:opacity-50"
-                                title="Download CSV Statement"
+                                title="Download PDF Statement"
                             >
                                 <Download className="w-5 h-5" />
                             </button>
