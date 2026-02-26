@@ -16,7 +16,8 @@ import {
   Moon,
   Clock as ClockIcon,
   Camera,
-  Loader2
+  Loader2,
+  FileText
 } from 'lucide-react';
 import { uploadAvatar, updateProfileAvatar, getProfile, getMe } from '../services/auth';
 
@@ -111,6 +112,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, the
     { id: 'dashboard', label: 'Intelligence', icon: LayoutDashboard },
     { id: 'workspace', label: 'Workspace', icon: Table2 },
     { id: 'projects', label: 'Projects', icon: Briefcase },
+    { id: 'expenses', label: 'Expenses', icon: FileText },
     { id: 'team', label: 'Team Access', icon: User },
     { id: 'reports', label: 'Reports', icon: ReportIcon },
   ];

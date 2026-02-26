@@ -181,6 +181,73 @@ export const deleteInvoice = async (invoiceId: string) => {
 
 // --- Expenses ---
 
+export const fetchFilteredExpenses = async (startDate?: string, endDate?: string): Promise<Expense[]> => {
+    const user = await getUser();
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
+        let query = supabase
+            .from('expenses')
+            .select('*')
+            .eq('company_id', companyId)
+            .order('date', { ascending: false });
+
+        if (startDate) {
+            query = query.gte('date', startDate);
+        }
+        if (endDate) {
+            query = query.lte('date', endDate);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        // Fetch projects for mapping names
+        const projectIds = [...new Set((data || []).map(e => e.project_id).filter(Boolean))];
+        const projectMap: Record<string, string> = {};
+        if (projectIds.length > 0) {
+            const { data: projects } = await supabase.from('projects').select('id, name').in('id', projectIds);
+            (projects || []).forEach(p => projectMap[p.id] = p.name);
+        }
+
+        return (data || []).map(e => mapExpense(e, projectMap));
+    }
+    throw new Error('User not authenticated');
+};
+
+export const fetchExpenseSummary = async (startDate?: string, endDate?: string) => {
+    const user = await getUser();
+    const companyId = await getCompanyId();
+
+    if (user && companyId) {
+        // We'll call the RPC we just created.
+        const { data, error } = await supabase.rpc('get_expense_summary', {
+            p_company_id: companyId,
+            p_start_date: startDate || null,
+            p_end_date: endDate || null
+        });
+
+        if (error) {
+            console.error('Error fetching expense summary via RPC:', error);
+            // Fallback for if RPC doesn't exist yet: Calculate on client for now, but log the error
+            console.log('Falling back to client-side aggregation for now.');
+            const expenses = await fetchFilteredExpenses(startDate, endDate);
+            const summaryMap: Record<string, number> = {};
+            expenses.forEach(e => {
+                summaryMap[e.category] = (summaryMap[e.category] || 0) + e.amount;
+            });
+            const summary = Object.keys(summaryMap).map(category => ({
+                category,
+                total_amount: summaryMap[category]
+            })).sort((a, b) => b.total_amount - a.total_amount);
+            return summary;
+        }
+
+        return data as { category: string; total_amount: number }[];
+    }
+    throw new Error('User not authenticated');
+};
+
 export const createExpense = async (expenseData: any) => {
     const user = await getUser();
     const companyId = await getCompanyId();

@@ -20,7 +20,12 @@ const ACTION_CONFIG: Record<string, { label: string; color: string; icon: typeof
 type SortField = 'timestamp' | 'userName' | 'tableName' | 'action' | 'amount';
 type SortDir = 'asc' | 'desc';
 
-const Reports: React.FC = () => {
+interface ReportsProps {
+    companyName?: string;
+}
+
+const Reports: React.FC<ReportsProps> = ({ companyName = 'Company' }) => {
+    // --- Audit Trail State ---
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -175,22 +180,25 @@ const Reports: React.FC = () => {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-slate-900 dark:text-white font-heading">Audit Trail</h2>
-                    <p className="text-slate-500 dark:text-slate-400">Complete activity log of all financial data changes.</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <div className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-xl text-sm font-bold">
-                        {filteredLogs.length} {filteredLogs.length === 1 ? 'entry' : 'entries'}
-                    </div>
-                    <button
-                        onClick={loadLogs}
-                        className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
-                        title="Refresh"
-                    >
-                        <RefreshCw className="w-4 h-4 text-slate-500" />
-                    </button>
+                    <h2 className="text-3xl font-bold text-slate-900 dark:text-white font-heading">Reports</h2>
+                    <p className="text-slate-500 dark:text-slate-400">View activity logs and generate financial statements.</p>
                 </div>
             </div>
+
+            <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-xl text-sm font-bold">
+                                {filteredLogs.length} {filteredLogs.length === 1 ? 'entry' : 'entries'}
+                            </div>
+                            <button
+                                onClick={loadLogs}
+                                className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                title="Refresh"
+                            >
+                                <RefreshCw className="w-4 h-4 text-slate-500" />
+                            </button>
+                        </div>
+                    </div>
 
             {/* Search + Filter Bar */}
             <div className="glass-panel p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800">

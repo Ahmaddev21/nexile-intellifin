@@ -4,6 +4,7 @@ import Reports from './components/Reports';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Workspace from './components/Workspace';
+import ExpenseHistory from './components/ExpenseHistory';
 import Projects from './components/Projects';
 import { FinancialData, AIInsight, Company, UserProgress } from './types';
 import { getFinancialInsights } from './services/geminiService';
@@ -445,6 +446,8 @@ const App: React.FC = () => {
 
       case 'projects':
         return <Projects data={financialData} currencySymbol={currencySymbol} onDataRefresh={refreshData} userRole={userRole} />;
+      case 'expenses':
+        return <ExpenseHistory companyName={company.name} />;
       case 'pricing':
         return (
           <div className="relative z-50">
